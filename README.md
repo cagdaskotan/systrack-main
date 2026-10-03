@@ -1,8 +1,8 @@
-# SysTrack — Fuar Sunum Deposu
+# SysTrack — Ana Uygulama
 
-Bu depo, **SysTrack** akıllı izleme cihazının fuar tanıtım videosu için hazırlanmıştır.
-İçinde cihaz üzerinde çalışan ana uygulamanın (`systrack-main`) kaynak kodu, arayüz
-ekran görüntüleri, ürün fotoğrafları ve videonun senaryo brief'i bulunur.
+SysTrack akıllı izleme cihazının üzerinde çalışan ana uygulamanın (`systrack-main`)
+kaynak kodu. Depoda ayrıca fuar tanıtım videosu için hazırlanmış arayüz ekran
+görüntüleri, ürün fotoğrafları ve video senaryosu bulunur.
 
 > **Video senaryosu için:** [`VIDEO-BRIEF.md`](VIDEO-BRIEF.md)
 
