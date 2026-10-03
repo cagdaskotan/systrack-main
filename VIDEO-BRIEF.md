@@ -103,6 +103,32 @@ Fare imleci bu videonun **ana oyuncusu**. Kuralları:
 
 ---
 
+## 2b. Ritim — dengeyi kur
+
+Ekran demolarının en sık düştüğü tuzak: bir sayfa açılıyor ve kamera orada
+**çok uzun** bekliyor. Fuarda bu ölümcül; ziyaretçi sıkılıp yürüyor.
+Tersi de kötü: her şey o kadar hızlı akıyor ki hiçbir şey algılanmıyor.
+
+Kural: **her sayfada tek bir "işte bu" anı var.** O ana kadar hızlı git,
+o anda yavaşla, sonra hemen devam et.
+
+- Sayfa açılışı + verinin dolması: **2 saniyeyi geçmesin**. Yükleniyor
+  durumunu göster ama üstünde oyalanma.
+- Her bölümün **kritik anı** (bilinmeyen cihazın bulunması, lisans
+  uyarısının kırmızıya dönmesi, sıcaklığın eşiği aşması, sıvı temasının
+  algılanması) → burada **1–1.5 saniye** nefes ver, hafif zoom yap,
+  ziyaretçinin gözü oraya otursun.
+- Dolgu hareket yok: amaçsız kaydırma, boşluğa giden imleç, gereksiz
+  menü açıp kapama **olmasın**. İmleç her hareketinde bir şeye gidiyor.
+- Bir bölümden diğerine geçiş **anında** olsun — tıklama ile yeni sayfa
+  arasında ölü zaman bırakma.
+- Metin şeridindeki cümle ekranda **2–3 saniye** kalsın: okunacak kadar
+  uzun, bekletecek kadar değil.
+
+Kaba oran: her bölümün **%70'i akış**, **%30'u o bölümün kritik anı.**
+
+---
+
 ## 3. Yapı
 
 ```
@@ -111,7 +137,7 @@ Fare imleci bu videonun **ana oyuncusu**. Kuralları:
 00:20 ─ 00:38   IP TARAYICI   Ağ taraması — cihazlar akarak buluyor
 00:38 ─ 00:54   ENVANTER      Varlık ve yazılım takibi, lisans uyarısı
 00:54 ─ 01:14   ORTAM İZLEME  Sensörler, eşik aşımı, sıvı teması
-01:14 ─ 01:22   BİLDİRİM      Uyarı telefona düşüyor
+01:14 ─ 01:22   BİLDİRİM      Uyarı e-posta ve Telegram ile gidiyor
 01:22 ─ 01:30   KAPANIŞ       Dört ürün, logo, slogan
 ```
 
@@ -264,6 +290,12 @@ zaman damgası `03:19`.
 
 ### 01:14 – 01:22 · BİLDİRİM
 
+> **DİKKAT — sık yapılan hata:** SysTrack'in **mobil uygulaması yoktur.**
+> Bildirimler yalnızca **e-posta** ve **Telegram** ile gider. Videoda telefon
+> uygulaması bildirimi, push notification veya SMS **gösterilmeyecek.**
+> Sistemin desteklediği kanallar kodda `ENUM('email','telegram')` olarak
+> tanımlıdır.
+
 İmleç üst bardaki **bildirim ziline** gidiyor — zilin üstünde kırmızı rozet
 `2` belirmiş. Tıklıyor, açılır panel iniyor:
 
@@ -272,10 +304,33 @@ zaman damgası `03:19`.
 ⚠  Kabinet Altı — Sıvı teması algılandı                az önce
 ```
 
-Sahne hafifçe geri çekiliyor; ekranın yanında bir **telefon** beliriyor ve
-aynı iki bildirim arka arkaya ekranına düşüyor.
+Sahne hafifçe geri çekiliyor ve ekranın yanında **iki kanal yan yana**
+beliriyor:
 
-> `Siz uyurken telefonunuz çaldı.`
+**Solda — Telegram mesajı.** Koyu temalı sohbet balonu, üstte bot adı,
+mesaj yazılarak geliyor:
+
+```
+🔴  SysTrack Uyarı
+    Sunucu Odası — Sıcaklık 31.2 °C
+    Eşik: 28 °C  ·  03:17
+```
+
+Hemen ardından ikinci balon düşüyor ve **sıvı sensörü uyarısıyla birlikte
+kameradan alınan kare fotoğraf olarak** ekleniyor:
+
+```
+🔴  SysTrack Uyarı
+    Kabinet Altı — Sıvı teması algılandı
+    03:19
+    [ kamera karesi ]
+```
+
+**Sağda — e-posta.** Gelen kutusu satırı belirip açılıyor; kurumsal
+şablonlu bir uyarı e-postası: üstte SysTrack başlığı, altında ölçüm değeri,
+eşik ve zaman damgası içeren tablo.
+
+> `E-posta ve Telegram ile anında haber verir.`
 
 ### 01:22 – 01:30 · KAPANIŞ
 
@@ -319,6 +374,9 @@ kapatmasın.
 - Açık tema (uygulama videoda koyu temada)
 - Işınlanan, sıçrayan veya hiç olmayan fare imleci
 - Tıklamaya **anında** tepki veren arayüz — gerçekçi değil
+- **Mobil uygulama bildirimi, push notification veya SMS göstermek** —
+  SysTrack'in mobil uygulaması yok. Yalnızca e-posta ve Telegram.
+- Bir sayfada gereğinden uzun oyalanmak veya dolgu hareket koymak
 - Kod, terminal penceresi, teknik jargon
 - Gerçek müşteri adı, gerçek IP veya seri numarası
 - Jenerik "siber güvenlik" klişeleri — kilit ikonu, kukuletalı hacker,

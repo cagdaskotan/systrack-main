@@ -27,7 +27,7 @@ Kullanıcı cihaza kendi ağından `http://<CIHAZ_IP>:8080` adresiyle erişir.
 | **Envanter** | Active Directory, SNMP, WinRM ve SSH ile cihaz ve donanım envanterini otomatik toplar |
 | **Yazılım & Lisans Uyumluluğu** | Kurulu yazılımları listeler, lisans durumunu ve şüpheli yazılımları tespit eder |
 | **Servis İzleme** | Uzak sunuculardaki Windows/Linux servislerinin durum değişimlerini izler |
-| **Bildirimler** | Kullanıcı tanımlı kurallara göre e-posta, Telegram ve webhook ile anlık uyarı |
+| **Bildirimler** | Kullanıcı tanımlı kurallara göre e-posta ve Telegram ile anlık uyarı |
 | **Raporlama** | CSV / HTML / PDF rapor üretimi |
 
 ---
@@ -77,6 +77,7 @@ anında uyarı gider.
 ```
 ├── VIDEO-BRIEF.md        ← Video senaryosu, anlatım tonu, sahne planı
 ├── fuar-medya/
+│   ├── referans/         ← Afişler — cihazların gerçek render'ları
 │   ├── arayuz/           ← Gerçek arayüz ekran görüntüleri
 │   ├── urun/             ← Cihaz ve sensör fotoğrafları
 │   └── marka/            ← Logo ve marka görselleri
