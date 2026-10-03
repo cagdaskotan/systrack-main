@@ -1,0 +1,263 @@
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="target-modal">
+  <style>
+    .metrics-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .metrics-toggle .toggle-track {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 9999px;
+      background: #e5e7eb;
+      transition: background 0.25s ease, box-shadow 0.25s ease;
+    }
+    .dark .metrics-toggle .toggle-track {
+      background: #374151;
+    }
+    .metrics-toggle .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 9999px;
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      transition: transform 0.25s ease;
+    }
+    .metrics-toggle input:checked + .toggle-track {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+    .metrics-toggle input:checked + .toggle-track::after {
+      transform: translateX(18px);
+    }
+    .metrics-animate {
+      transition: max-height 0.35s ease, opacity 0.35s ease, transform 0.35s ease;
+      overflow: hidden;
+    }
+    .metrics-animate.collapsed {
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+    }
+    .metrics-animate.expanded {
+      max-height: 420px;
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+  </style>
+  <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 id="target-modal-title" class="text-lg font-medium text-gray-900 dark:text-gray-100">
+          Neues Ziel hinzufügen
+        </h3>
+        <button onclick="closeTargetModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form id="target-form" class="space-y-4">
+        <input type="hidden" id="target-id" value="">
+
+        <div id="target-duplicate-warning"
+             class="hidden inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800"
+             role="alert">
+          Dieses Ziel existiert bereits
+        </div>
+
+        <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-3 text-sm text-amber-900 dark:text-amber-100 flex gap-3">
+          <div class="text-amber-500 dark:text-amber-300 mt-0.5">
+            <i class="fas fa-info-circle"></i>
+          </div>
+          <div>
+            Ping-, HTTP- und HTTPS-Prüfungen können durch die Firewall des Zielsystems blockiert werden. Dann erscheint das Gerät offline,
+            obwohl es erreichbar ist. Stellen Sie sicher, dass Ihre Firewall diese Protokolle zulässt, damit der Status korrekt bleibt.
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Zielname</label>
+            <input type="text" id="target-name" required
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                   placeholder="Z.B.: Webserver" value="">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">IP-Adresse / Hostname</label>
+            <input type="text" id="target-address" required
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                   placeholder="Z.B.: 192.168.1.1 oder google.com" value="">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monitoring-Typ</label>
+          <select id="target-monitoring-type" required
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  onchange="toggleHTTPFields()">
+            <option value="ping" selected>Ping (ICMP)</option>
+            <option value="http">HTTP</option>
+            <option value="https">HTTPS</option>
+          </select>
+        </div>
+
+        <!-- HTTP/HTTPS Specific Fields -->
+        <div id="http-fields" class="space-y-4" style="display: none;">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">HTTP-Methode</label>
+              <select id="target-http-method"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                <option value="GET" selected>GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="HEAD">HEAD</option>
+                <option value="OPTIONS">OPTIONS</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">HTTP-Pfad</label>
+              <input type="text" id="target-http-path"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                     placeholder="/api/health" value="/">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Erwarteter Statuscode</label>
+              <input type="number" id="target-expected-status" min="100" max="599"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                     value="200">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Timeout (Sekunden)</label>
+              <input type="number" id="target-timeout-sec" min="1" max="60"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                     value="10">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Erwarteter Inhalt (optional)</label>
+            <input type="text" id="target-expected-content"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                   placeholder="Erwarteter Text im Response-Body" value="">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">HTTP-Header (JSON)</label>
+            <textarea id="target-http-headers" rows="3"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder='{"User-Agent": "SysTrack/1.0", "Authorization": "Bearer token"}'></textarea>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <label class="flex items-center">
+              <input type="checkbox" id="target-ssl-check"
+                     class="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500">
+              <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">SSL-Zertifikatsprüfung</span>
+            </label>
+
+            <label class="flex items-center">
+              <input type="checkbox" id="target-follow-redirects"
+                     class="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500" checked>
+              <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Weiterleitungen folgen</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Metrics / SNMP Settings -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4 bg-gray-50/70 dark:bg-gray-800/40">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">Server-Metriken (SNMP)</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Um Metriken zu erfassen, muss auf dem Zielgerät SNMP aktiviert sein und die Community-Zeichenfolge übereinstimmen.
+              </p>
+            </div>
+            <label class="metrics-toggle cursor-pointer select-none">
+              <input type="checkbox" id="target-metrics-enabled"
+                     class="sr-only"
+                     onchange="toggleMetricsFields()">
+              <div class="toggle-track"></div>
+              <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Aktiv</span>
+            </label>
+          </div>
+
+          <div id="metrics-fields" class="metrics-animate collapsed">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">SNMP-Community</label>
+                <input type="text" id="target-snmp-community"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       placeholder="public" value="public" disabled>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Auf dem Gerät konfigurierte Community.</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">SNMP-Version</label>
+                <select id="target-snmp-version"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        disabled>
+                  <option value="v2c" selected>v2c</option>
+                  <option value="v1">v1</option>
+                  <option value="v3">v3</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
+          <div class="relative">
+            <input type="text" id="target-tags"
+                   class="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                   placeholder="Z.B.: web,production,critical" value=""
+                   onfocus="showTagSuggestions()" onblur="hideTagSuggestions()" oninput="filterTagSuggestions()">
+            <button type="button" onclick="toggleTagSuggestions()"
+                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div id="tag-suggestions"
+                 class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden">
+              <div id="tag-suggestions-list" class="py-1">
+                <!-- Tag suggestions will be populated here -->
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Sie können mehrere Tags durch Kommas getrennt hinzufügen. Klicken Sie, um vorhandene Tags anzuzeigen.
+          </p>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-4">
+          <button type="button" onclick="closeTargetModal()"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-lg transition-colors">
+            Abbrechen
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+            Speichern
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

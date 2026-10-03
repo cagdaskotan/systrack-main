@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysTrack - Aktivasyon Bekleniyor</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --accent: #38bdf8;
+            --success: #16a34a;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(140deg, #0d1425 0%, #101931 40%, #0b1221 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent 70%);
+            top: -250px;
+            right: -250px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.15), transparent 70%);
+            bottom: -200px;
+            left: -200px;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(50px) scale(1.1); }
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 24px;
+            padding: 48px 40px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .qr-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(14, 165, 233, 0.2));
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 20px rgba(59, 130, 246, 0);
+            }
+        }
+
+        .qr-icon svg {
+            width: 70px;
+            height: 70px;
+            color: var(--primary);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: rgba(226, 232, 240, 0.8);
+            margin-bottom: 36px;
+            line-height: 1.6;
+        }
+
+        .instructions {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .instructions-title {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        .step {
+            display: flex;
+            align-items: start;
+            gap: 16px;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            min-width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            color: rgba(226, 232, 240, 0.9);
+            font-size: 15px;
+            line-height: 1.6;
+            padding-top: 4px;
+        }
+
+        .status-box {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .status-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(148, 163, 184, 0.8);
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--warning);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--warning);
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .checking-status {
+            font-size: 14px;
+            color: rgba(148, 163, 184, 0.8);
+            margin-bottom: 24px;
+        }
+
+        .support {
+            background: rgba(37, 99, 235, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 13px;
+            color: rgba(226, 232, 240, 0.7);
+            line-height: 1.6;
+        }
+
+        .support strong {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .success-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            background: rgba(22, 163, 74, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(22, 163, 74, 0.4);
+        }
+
+        .success-icon svg {
+            width: 60px;
+            height: 60px;
+            color: var(--success);
+        }
+
+        .redirect-message {
+            font-size: 14px;
+            color: rgba(226, 232, 240, 0.8);
+            margin-top: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 36px 28px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .qr-icon {
+                width: 100px;
+                height: 100px;
+            }
+
+            .qr-icon svg {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Waiting State -->
+        <div id="waitingState">
+            <div class="qr-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+            </div>
+
+            <h1 style="margin-bottom: 30px">Cihaz Aktivasyonu Bekleniyor</h1>
+            <!-- <p class="subtitle">
+                Cihazınızı kullanmaya başlamak için lütfen aktivasyon işlemini tamamlayın.
+            </p> -->
+
+            <div class="instructions">
+                <div class="instructions-title">Aktivasyon Adımları</div>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-text">Cihazın üzerinde bulunan QR kodu telefonunuz veya tabletinizle okutun</div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-text">Açılan sayfada şirket bilgilerinizi doldurun ve aktivasyon talebini gönderin</div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-text">Yönetim ekibimiz talebinizi onayladıktan sonra e-posta adresinize onay linki gönderilecektir</div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-text">E-postadaki linke tıklayarak aktivasyonu tamamlayın. Cihaz otomatik olarak aktif hale gelecektir</div>
+                </div>
+            </div>
+
+            <div class="status-box">
+                <div class="status-label">Aktivasyon Durumu</div>
+                <div class="status-value">
+                    <span class="status-dot"></span>
+                    <span>Aktivasyon Bekleniyor</span>
+                </div>
+            </div>
+
+            <!-- <div class="checking-status">
+                <span class="spinner"></span>
+                Aktivasyon durumu otomatik kontrol ediliyor...
+            </div> -->
+
+            <div class="support">
+                <strong>Yardıma mı ihtiyacınız var?</strong><br>
+                Aktivasyon süreci hakkında sorularınız için destek ekibimizle iletişime geçebilirsiniz:<br>
+                <strong>satis@zsistem.net</strong>
+            </div>
+        </div>
+
+        <!-- Activated State -->
+        <div id="activatedState" class="hidden">
+            <div class="success-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+
+            <h1>Aktivasyon Tamamlandı!</h1>
+            <p class="subtitle">
+                Cihazınız başarıyla aktive edildi. Ana sayfaya yönlendiriliyorsunuz...
+            </p>
+
+            <div class="redirect-message">
+                <span class="spinner"></span>
+                Yönlendiriliyor...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MANAGEMENT_URL = 'http://37.148.202.211:18080';
+        const CHECK_INTERVAL = 30000; // 30 seconds
+
+        let checkTimer;
+
+        // Check activation status and sync from management server
+        async function checkActivationStatus() {
+            try {
+                // Call sync-activation endpoint - this checks management server and updates local DB
+                const response = await fetch('/api/sync-activation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to sync activation status');
+                    return;
+                }
+
+                const data = await response.json();
+
+                console.log('Sync result:', data);
+
+                // If activated, show success and redirect
+                if (data.activated && data.synced) {
+                    console.log('✅ Device activated successfully!');
+                    onActivationComplete();
+                } else if (data.status) {
+                    console.log(`Status: ${data.status} - waiting for activation...`);
+                }
+
+            } catch (error) {
+                console.error('Error checking activation status:', error);
+            }
+        }
+
+        function onActivationComplete() {
+            // Stop checking
+            if (checkTimer) {
+                clearInterval(checkTimer);
+            }
+
+            // Show success state
+            document.getElementById('waitingState').classList.add('hidden');
+            document.getElementById('activatedState').classList.remove('hidden');
+
+            // Redirect to home page after 3 seconds (will show admin panel when activation mode exits)
+            setTimeout(() => {
+                fetch('/', { cache: 'reload' }).finally(() => {
+                    window.location.replace('/');
+                });
+            }, 3000);
+        }
+
+        // Start checking on page load
+        checkActivationStatus();
+        checkTimer = setInterval(checkActivationStatus, CHECK_INTERVAL);
+    </script>
+</body>
+</html>

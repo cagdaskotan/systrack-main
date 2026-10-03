@@ -1,0 +1,29 @@
+# Derlenmiş binary'ler
+*.exe
+*.exe~
+/systrack
+/systrack-arm64
+bin/
+
+# Ortam değişkenleri — ASLA commit edilmez
+.env
+.env.local
+.env.production
+
+# Go cache / geçici
+.gocache*/
+.gotmp*/
+tmp/
+temp/
+
+# Loglar ve veritabanı dosyaları
+logs/
+*.log
+*.db
+*.sqlite*
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

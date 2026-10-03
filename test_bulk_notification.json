@@ -1,0 +1,10 @@
+{
+  "type": "target_status_change",
+  "channel": "email",
+  "priority": "high",
+  "title": "Toplu Hedef Durum Bildirimi - Test",
+  "message": "Aşağıdaki hedefler offline duruma geçti (TEST)",
+  "recipients": [
+    "{\"emails\":[\"admin@firma.com\"],\"targets\":[{\"id\":1,\"name\":\"Ana Ofis Router\",\"address\":\"192.168.1.1\",\"status\":\"Offline\",\"status_class\":\"offline\",\"uptime_percent\":98.5,\"response_time\":250},{\"id\":2,\"name\":\"Şube 1 Switch\",\"address\":\"192.168.2.1\",\"status\":\"Offline\",\"status_class\":\"offline\",\"uptime_percent\":99.2,\"response_time\":180},{\"id\":3,\"name\":\"DMZ Firewall\",\"address\":\"10.0.0.1\",\"status\":\"Offline\",\"status_class\":\"offline\",\"uptime_percent\":97.8,\"response_time\":320},{\"id\":4,\"name\":\"Şube 2 Router\",\"address\":\"192.168.3.1\",\"status\":\"Offline\",\"status_class\":\"offline\",\"uptime_percent\":95.2,\"response_time\":410},{\"id\":5,\"name\":\"Yedek Sunucu\",\"address\":\"10.0.0.50\",\"status\":\"Warning\",\"status_class\":\"warning\",\"uptime_percent\":89.5,\"response_time\":520}]}"
+  ]
+}

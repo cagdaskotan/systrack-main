@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  systrack:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: systrack
+    restart: unless-stopped
+    ports:
+      - "8080:8081"
+    environment:
+      - DB_DSN=systrack:CHANGE_ME_DB_PASS@tcp(mariadb:3306)/systrack?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci
+      - JWT_SECRET=${JWT_SECRET:-$(openssl rand -base64 32)}
+      - ADMIN_EMAIL=admin@systrack.local
+      - ADMIN_PASSWORD=CHANGE_ME_DB_PASS
+      - BIND_ADDRESS=0.0.0.0
+      - PORT=8080
+    volumes:
+      - ./static:/app/static:ro
+      - ./logs:/app/logs
+      - ./templates:/app/templates:ro
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - systrack-network
+    privileged: true  # fping için gerekli
+
+  mariadb:
+    image: mariadb:10.11
+    container_name: systrack-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: CHANGE_ME_ROOT_PASS
+      MYSQL_DATABASE: systrack
+      MYSQL_USER: systrack
+      MYSQL_PASSWORD: CHANGE_ME_DB_PASS
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      # - ./internal/db/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"
+    networks:
+      - systrack-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "systrack", "-pCHANGE_ME_DB_PASS"]
+      timeout: 20s
+      retries: 10
+
+  adminer:
+    image: adminer:4
+    container_name: systrack-adminer
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+    networks:
+      - systrack-network
+
+volumes:
+  mariadb_data:
+
+networks:
+  systrack-network:
+    driver: bridge

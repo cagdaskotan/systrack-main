@@ -1,0 +1,328 @@
+﻿<div class="space-y-6" id="network-settings-page" x-cloak>
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm px-6 py-5">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="space-y-1">
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Netzwerkeinstellungen</h1>
+        <p id="network-page-description" class="text-sm text-gray-600 dark:text-gray-300">
+          IP-Konfiguration für die <span class="font-mono font-semibold">eth0</span>-Schnittstelle des Geräts
+        </p>
+      </div>
+      <button id="network-refresh-btn"
+              class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+        <i class="fas fa-sync text-xs"></i>
+        Aktualisieren
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 sm:p-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start">
+      <div class="flex flex-wrap gap-2 bg-gray-50 dark:bg-gray-900/60 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+        <button id="network-tab-btn-config"
+                class="px-4 py-2 rounded-lg text-sm font-semibold bg-primary-600 text-white shadow-sm">
+          IP-Konfiguration
+        </button>
+        <button id="network-tab-btn-allowlist"
+                class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-100 hover:bg-white/70 dark:hover:bg-gray-800/70 transition">
+          IP-Zulassungsliste
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Network Configuration Card -->
+  <div id="network-tab-config" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center">
+          <i class="fas fa-network-wired"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">IP-Konfiguration</h2>
+        </div>
+      </div>
+      <!-- Edit / Cancel Button -->
+      <button id="network-edit-btn"
+              class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition
+                     bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100
+                     hover:bg-gray-200 dark:hover:bg-gray-600">
+        <i class="fas fa-pen text-xs"></i>
+        <span>Bearbeiten</span>
+      </button>
+    </div>
+
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Mode - always static, hidden -->
+        <input type="hidden" id="network-mode" value="static">
+
+        <!-- IP Address -->
+        <div class="space-y-2">
+          <label class="block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">IP-Adresse</label>
+          <input id="network-ip" type="text" disabled placeholder="-"
+                 class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
+                        bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100
+                        disabled:opacity-60 disabled:cursor-not-allowed
+                        focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
+        </div>
+
+        <!-- Subnet Mask -->
+        <div class="space-y-2">
+          <label class="block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Subnetzmaske</label>
+          <select id="network-subnet" disabled
+                  class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
+                         bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100
+                         disabled:opacity-60 disabled:cursor-not-allowed
+                         focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
+            <option value="">Auswählen...</option>
+            <option value="255.255.255.0">/24 — 255.255.255.0</option>
+            <option value="255.255.0.0">/16 — 255.255.0.0</option>
+            <option value="255.0.0.0">/8 — 255.0.0.0</option>
+            <option value="255.255.254.0">/23 — 255.255.254.0</option>
+            <option value="255.255.252.0">/22 — 255.255.252.0</option>
+            <option value="255.255.248.0">/21 — 255.255.248.0</option>
+            <option value="255.255.240.0">/20 — 255.255.240.0</option>
+            <option value="255.255.224.0">/19 — 255.255.224.0</option>
+            <option value="255.255.192.0">/18 — 255.255.192.0</option>
+            <option value="255.255.128.0">/17 — 255.255.128.0</option>
+            <option value="255.255.255.128">/25 — 255.255.255.128</option>
+            <option value="255.255.255.192">/26 — 255.255.255.192</option>
+            <option value="255.255.255.224">/27 — 255.255.255.224</option>
+            <option value="255.255.255.240">/28 — 255.255.255.240</option>
+            <option value="255.255.255.248">/29 — 255.255.255.248</option>
+            <option value="255.255.255.252">/30 — 255.255.255.252</option>
+          </select>
+          <p class="text-xs text-gray-400 dark:text-gray-500">Wählen Sie die passende Subnetzmaske für Ihr Netzwerk.</p>
+        </div>
+
+        <!-- Gateway -->
+        <div class="space-y-2">
+          <label class="block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Gateway</label>
+          <input id="network-gateway" type="text" disabled placeholder="-"
+                 class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
+                        bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100
+                        disabled:opacity-60 disabled:cursor-not-allowed
+                        focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
+          <p class="text-xs text-amber-600 dark:text-amber-400">
+            <i class="fas fa-exclamation-triangle mr-1"></i>
+            Wenn leer, funktioniert der automatische DHCP-Wechsel beim Umzug in ein anderes Netzwerk nicht.
+          </p>
+        </div>
+
+        <!-- DNS 1 -->
+        <div class="space-y-2">
+          <label class="block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">DNS 1 <span class="normal-case font-normal text-gray-400 dark:text-gray-500">(optional)</span></label>
+          <input id="network-dns1" type="text" disabled placeholder="Leer lassen möglich"
+                 class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
+                        bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100
+                        disabled:opacity-60 disabled:cursor-not-allowed
+                        focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
+          <p class="text-xs text-gray-400 dark:text-gray-500">Wenn leer, wird 8.8.8.8 als Standard verwendet</p>
+        </div>
+
+        <!-- DNS 2 -->
+        <div class="space-y-2">
+          <label class="block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">DNS 2 <span class="normal-case font-normal text-gray-400 dark:text-gray-500">(optional)</span></label>
+          <input id="network-dns2" type="text" disabled placeholder="Leer lassen möglich"
+                 class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
+                        bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100
+                        disabled:opacity-60 disabled:cursor-not-allowed
+                        focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
+          <p class="text-xs text-gray-400 dark:text-gray-500">Wenn leer, wird 1.1.1.1 als Standard verwendet</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons (hidden by default, shown in edit mode) -->
+      <div id="network-actions" class="hidden mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Nach einer IP-Änderung kann die Verbindung unterbrochen werden. Verbinden Sie sich ggf. mit der neuen IP erneut.
+          </p>
+          <div class="flex items-center gap-3">
+            <button id="network-cancel-btn"
+                    class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+                           text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700
+                           hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">
+              <i class="fas fa-times text-xs"></i>
+              Abbrechen
+            </button>
+            <button id="network-apply-btn"
+                    class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+                           text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition
+                           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+              <i class="fas fa-check text-xs"></i>
+              Einstellungen anwenden
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Access Allowlist Card -->
+  <div id="network-tab-allowlist" class="hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex items-start gap-4">
+        <div class="h-12 w-12 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shadow-sm">
+          <i class="fas fa-shield-alt text-lg"></i>
+        </div>
+        <div class="space-y-1">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">IP-Zulassungsliste</h2>
+          <p class="text-sm text-gray-600 dark:text-gray-300">Wenn aktiviert, dürfen nur freigegebene IP-Adressen zugreifen.</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-4">
+        <div class="text-right">
+          <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Regelstatus</div>
+          <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">Zugriffsbeschränkung</div>
+        </div>
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/60 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
+          <input id="allowlist-enabled" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+          Aktiv
+        </label>
+      </div>
+    </div>
+
+    <div class="p-6 space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-[2fr_2fr_auto] gap-4 items-end">
+        <div class="space-y-2">
+          <label class="block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">IP-Adresse</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fas fa-network-wired"></i></span>
+            <input id="allowlist-ip" type="text" placeholder="z. B. 192.168.1.10"
+                   class="w-full pl-10 pr-3 py-3 rounded-lg border border-gray-300 dark:border-gray-600
+                          bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100
+                          focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
+          </div>
+        </div>
+        <div class="space-y-2">
+          <label class="block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Bezeichnung (Optional)</label>
+          <input id="allowlist-label" type="text" placeholder="z. B. Büro"
+                 class="w-full px-3 py-3 rounded-lg border border-gray-300 dark:border-gray-600
+                        bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100
+                        focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
+        </div>
+        <div class="flex lg:justify-end">
+          <button id="allowlist-add-btn"
+                  class="w-full lg:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition shadow-sm">
+            <i class="fas fa-plus text-xs"></i>
+            IP hinzufügen
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-full">
+          <i class="fas fa-lock"></i>
+          <span>Wenn die Zulassungsliste aktiv ist, werden alle nicht gelisteten IP-Adressen blockiert.</span>
+        </div>
+        <div class="inline-flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-3 py-2 rounded-full">
+          <i class="fas fa-link"></i>
+          <span>Bei aktiver Zulassungsliste funktionieren <span class="font-semibold">systrack:8080</span> und <span class="font-semibold">systrack.local:8080</span> eventuell nicht; verwenden Sie <span class="font-semibold">IP:8080</span>.</span>
+        </div>
+        <div class="inline-flex items-center gap-2 text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 px-3 py-2 rounded-full">
+          <i class="fas fa-mobile-alt"></i>
+          <span>Für den Zugriff per Telefon wird eine statische VPN-IP empfohlen.</span>
+        </div>
+      </div>
+
+      <div class="border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-gray-50/90 via-white/70 to-gray-50/60 dark:from-gray-900/60 dark:via-gray-900/30 dark:to-gray-900/60">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div class="space-y-1">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Zugelassene IPs</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Nur gelistete IPs können zugreifen.</p>
+          </div>
+          <div class="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-900/50 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700">
+            <i class="fas fa-check-circle text-emerald-500"></i>
+            Vertrauensliste
+          </div>
+        </div>
+        <div id="allowlist-list" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Network Confirm Modal -->
+  <div id="network-confirm-modal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+      <div class="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 flex items-center justify-center">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Netzwerkeinstellungen bestätigen</h3>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+          <div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Neue IP-Adresse</p>
+            <p class="text-xl font-mono font-bold text-gray-900 dark:text-white" id="network-confirm-ip">-</p>
+          </div>
+          <div class="p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg">
+            <p class="text-xs text-amber-700 dark:text-amber-300">
+              <i class="fas fa-exclamation-circle mr-1"></i>
+              Nach dem Anwenden dieser Einstellungen wird Ihre aktuelle Verbindung unterbrochen. Sie müssen sich mit der neuen IP-Adresse erneut verbinden.
+            </p>
+          </div>
+          <div id="network-confirm-no-gateway" class="hidden p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg">
+            <p class="text-xs text-red-700 dark:text-red-300">
+              <i class="fas fa-times-circle mr-1"></i>
+              <strong>Kein Gateway angegeben.</strong> Beim Umzug in ein anderes Netzwerk funktioniert der automatische DHCP-Wechsel nicht. Drücken Sie 3× den Stromtaster, um auf 192.168.100.5 zurückzusetzen.
+            </p>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            <i class="fas fa-info-circle mr-1"></i>
+            Bei falscher IP-Eingabe können Sie die Fabrik-IP (192.168.100.5) durch dreimaliges Drücken des Power-Buttons innerhalb von 5 Sekunden zurücksetzen.
+          </p>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+          <button id="network-confirm-cancel"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+            Abbrechen
+          </button>
+          <button id="network-confirm-ok"
+                  class="px-4 py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition">
+            Bestätigen und anwenden
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div id="allowlist-delete-modal" class="fixed inset-0 z-50 hidden">
+    <div id="allowlist-delete-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+      <div class="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300 flex items-center justify-center">
+              <i class="fas fa-trash"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">IP-Löschbestätigung</h3>
+            </div>
+          </div>
+        </div>
+        <div class="px-6 py-5 space-y-3">
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            Möchten Sie <span class="font-semibold" id="allowlist-delete-ip">-</span> wirklich löschen?
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Wenn diese IP entfernt wird, wird auch die Zugriffsberechtigung aufgehoben.</p>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+          <button id="allowlist-delete-cancel"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+            Abbrechen
+          </button>
+          <button id="allowlist-delete-confirm"
+                  class="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition">
+            Löschen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

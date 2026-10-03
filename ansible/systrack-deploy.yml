@@ -1,0 +1,159 @@
+---
+- name: SysTrack Raspberry Pi 5 Deployment
+  hosts: raspberry_pi
+  become: yes
+  vars:
+    systrack_user: pi
+    systrack_home: /home/pi
+    systrack_app_dir: /opt/systrack
+    systrack_port: 8080
+    mysql_root_password: "CHANGE_ME_ROOT_PASS"
+    systrack_db_password: "CHANGE_ME_DB_PASS"
+    admin_email: "admin@systrack.local"
+    admin_password: "CHANGE_ME_DB_PASS"
+
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - mariadb-server
+          - fping
+          - golang-go
+          - git
+          - curl
+          - wget
+          - unzip
+          - build-essential
+          - pkg-config
+          - ufw
+        state: present
+
+    - name: Start and enable MariaDB
+      systemd:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Configure MariaDB
+      mysql_user:
+        name: "{{ systrack_user }}"
+        password: "{{ systrack_db_password }}"
+        priv: "systrack.*:ALL"
+        state: present
+
+    - name: Create systrack database
+      mysql_db:
+        name: systrack
+        state: present
+        encoding: utf8mb4
+        collation: utf8mb4_unicode_ci
+
+    - name: Create application directory
+      file:
+        path: "{{ systrack_app_dir }}"
+        state: directory
+        owner: "{{ systrack_user }}"
+        group: "{{ systrack_user }}"
+        mode: '0755'
+
+    - name: Copy application files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ systrack_app_dir }}/{{ item }}"
+        owner: "{{ systrack_user }}"
+        group: "{{ systrack_user }}"
+      with_fileglob:
+        - "*.go"
+        - "go.mod"
+        - "go.sum"
+        - "Makefile"
+        - "static/"
+        - "internal/"
+        - "cmd/"
+        - "scripts/"
+        - "systemd/"
+
+    - name: Build application
+      command: go build -o systrack ./cmd/systrack
+      args:
+        chdir: "{{ systrack_app_dir }}"
+      become_user: "{{ systrack_user }}"
+
+    - name: Create environment file
+      template:
+        src: env.j2
+        dest: "{{ systrack_app_dir }}/.env"
+        owner: "{{ systrack_user }}"
+        group: "{{ systrack_user }}"
+        mode: '0600'
+
+    - name: Install golang-migrate
+      command: go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+      become_user: "{{ systrack_user }}"
+      environment:
+        PATH: "{{ systrack_home }}/go/bin:{{ ansible_env.PATH }}"
+
+    - name: Run database migrations
+      command: "{{ systrack_home }}/go/bin/migrate -path internal/db/migrations -database 'mysql://systrack:{{ systrack_db_password }}@tcp(localhost:3306)/systrack' up"
+      args:
+        chdir: "{{ systrack_app_dir }}"
+      become_user: "{{ systrack_user }}"
+
+    - name: Create admin user
+      command: go run ./scripts/seed_admin.go
+      args:
+        chdir: "{{ systrack_app_dir }}"
+      become_user: "{{ systrack_user }}"
+
+    - name: Copy systemd service file
+      copy:
+        src: "{{ systrack_app_dir }}/systemd/systrack.service"
+        dest: /etc/systemd/system/systrack.service
+        mode: '0644'
+
+    - name: Update systemd service file
+      replace:
+        path: /etc/systemd/system/systrack.service
+        regexp: '/opt/systrack'
+        replace: "{{ systrack_app_dir }}"
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable systrack service
+      systemd:
+        name: systrack
+        enabled: yes
+        state: started
+
+    - name: Configure firewall
+      ufw:
+        rule: allow
+        port: "{{ systrack_port }}"
+        proto: tcp
+
+    - name: Enable firewall
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+
+    - name: Show deployment info
+      debug:
+        msg:
+          - "SysTrack deployment completed!"
+          - "Web Interface: http://{{ ansible_default_ipv4.address }}:{{ systrack_port }}"
+          - "Admin Email: {{ admin_email }}"
+          - "Admin Password: {{ admin_password }}"

@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  systrack:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: systrack
+    restart: unless-stopped
+    network_mode: "host"
+    # Log rotasyonu: konteyner logu en fazla 3 × 50MB = 150MB tutar.
+    # Bu olmadan json.log sınırsız büyüyüp diski dolduruyordu (bir cihazda 32GB).
+    # Konteyner her güncellemede yeniden yaratıldığı için eski dev log da otomatik silinir.
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    environment:
+      - DB_DSN=systrack:CHANGE_ME_DB_PASS@tcp(127.0.0.1:3306)/systrack?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci
+      - JWT_SECRET=${JWT_SECRET:-$(openssl rand -base64 32)}
+      - ADMIN_EMAIL=admin@systrack.local
+      - ADMIN_PASSWORD=CHANGE_ME_DB_PASS
+      - MANAGEMENT_SERVER_URL=${MANAGEMENT_SERVER_URL:-http://37.148.202.211:18080}
+      - SOFTWARE_VERSION=${SOFTWARE_VERSION:-1.0.0}
+      - BIND_ADDRESS=0.0.0.0
+      - APP_PORT=8080
+      - MALWAREBAZAAR_KEY=${MALWAREBAZAAR_KEY:-}
+      - OTX_API_KEY=${OTX_API_KEY:-}
+      # Ortam sensörü — management panelinden sensör bağlandıktan sonra otomatik bulunur
+      - MQTT_BROKER_URL=${MQTT_BROKER_URL:-ws://mqtt.systrack.app:9001}
+      - MQTT_USERNAME=${MQTT_USERNAME:-systrack}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+    volumes:
+      - ./static:/app/static:ro
+      - ./logs:/app/logs
+      - ./templates:/app/templates:ro
+      - /home/systrack/network-pending:/app/network-pending:rw
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:10.11
+    container_name: systrack-mariadb
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    environment:
+      MYSQL_ROOT_PASSWORD: CHANGE_ME_ROOT_PASS
+      MYSQL_DATABASE: systrack
+      MYSQL_USER: systrack
+      MYSQL_PASSWORD: CHANGE_ME_DB_PASS
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      # - ./internal/db/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"
+    networks:
+      - systrack-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "systrack", "-pCHANGE_ME_DB_PASS"]
+      timeout: 20s
+      retries: 10
+
+  adminer:
+    image: adminer:4
+    container_name: systrack-adminer
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+    networks:
+      - systrack-network
+
+volumes:
+  mariadb_data:
+
+networks:
+  systrack-network:
+    driver: bridge

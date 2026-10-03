@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSH Terminal - SysTrack</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- XTerm.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1e1e1e;
+            font-family: 'Courier New', monospace;
+        }
+
+        #terminal-container {
+            width: 100%;
+            height: calc(100vh - 60px);
+            padding: 10px;
+        }
+
+        #terminal {
+            width: 100%;
+            height: 100%;
+        }
+
+        .status-bar {
+            background: #2d2d2d;
+            color: #fff;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #3d3d3d;
+        }
+
+        .status-connected {
+            color: #4ade80;
+        }
+
+        .status-disconnected {
+            color: #ef4444;
+        }
+
+        .status-connecting {
+            color: #fbbf24;
+        }
+
+        #username-modal {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #2d2d2d;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            min-width: 400px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div>
+            <span class="font-bold">SysTrack SSH Terminal</span>
+            <span id="connection-info" class="ml-4 text-sm"></span>
+        </div>
+        <div>
+            <span id="status-indicator" class="status-connecting">● Bağlanıyor...</span>
+        </div>
+    </div>
+
+    <!-- Username Modal -->
+    <div id="username-modal">
+        <div class="modal-content">
+            <h2 class="text-white text-xl font-bold mb-4">SSH Bağlantısı</h2>
+            <p class="text-gray-300 mb-4">Hedef: <span id="target-address" class="text-green-400 font-mono"></span></p>
+
+            <form id="username-form">
+                <div class="mb-4">
+                    <label for="username" class="block text-gray-300 mb-2">Kullanıcı Adı:</label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        class="w-full px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:border-green-500"
+                        placeholder="root"
+                        required
+                        autocomplete="off"
+                    />
+                </div>
+
+                <div class="flex justify-end space-x-2">
+                    <button
+                        type="button"
+                        onclick="window.close()"
+                        class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500 transition"
+                    >
+                        İptal
+                    </button>
+                    <button
+                        type="submit"
+                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition"
+                    >
+                        Bağlan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Terminal Container -->
+    <div id="terminal-container">
+        <div id="terminal"></div>
+    </div>
+
+    <script>
+        // URL parametrelerini al
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('target_id');
+        const targetAddress = urlParams.get('target_address') || 'Bilinmiyor';
+
+        if (!targetId) {
+            alert('Hedef ID bulunamadı!');
+            window.close();
+        }
+
+        // Target adresini göster
+        document.getElementById('target-address').textContent = targetAddress;
+
+        // Terminal oluştur
+        const term = new Terminal({
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: 'Courier New, monospace',
+            theme: {
+                background: '#1e1e1e',
+                foreground: '#ffffff',
+                cursor: '#ffffff',
+                cursorAccent: '#000000',
+                selection: 'rgba(255, 255, 255, 0.3)',
+                black: '#000000',
+                red: '#e06c75',
+                green: '#98c379',
+                yellow: '#d19a66',
+                blue: '#61afef',
+                magenta: '#c678dd',
+                cyan: '#56b6c2',
+                white: '#abb2bf',
+                brightBlack: '#5c6370',
+                brightRed: '#e06c75',
+                brightGreen: '#98c379',
+                brightYellow: '#d19a66',
+                brightBlue: '#61afef',
+                brightMagenta: '#c678dd',
+                brightCyan: '#56b6c2',
+                brightWhite: '#ffffff'
+            }
+        });
+
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+        term.open(document.getElementById('terminal'));
+        fitAddon.fit();
+
+        // Pencere boyutu değiştiğinde terminal boyutunu ayarla
+        window.addEventListener('resize', () => {
+            fitAddon.fit();
+        });
+
+        let ws = null;
+
+        // Username form submit
+        document.getElementById('username-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+
+            if (!username) {
+                alert('Lütfen kullanıcı adı girin!');
+                return;
+            }
+
+            // Modal'ı gizle
+            document.getElementById('username-modal').classList.add('hidden');
+
+            // WebSocket bağlantısını başlat
+            connectSSH(username);
+        });
+
+        function connectSSH(username) {
+            updateStatus('connecting', `${username}@${targetAddress}`);
+
+            // Token'ı localStorage'dan al
+            const token = localStorage.getItem('token');
+            if (!token) {
+                term.write('\r\n\x1b[31mKimlik doğrulama hatası! Lütfen giriş yapın.\x1b[0m\r\n');
+                updateStatus('disconnected', 'Kimlik Doğrulama Hatası');
+                setTimeout(() => {
+                    window.close();
+                }, 2000);
+                return;
+            }
+
+            // WebSocket URL'ini oluştur
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ssh-ws?target_id=${targetId}&username=${encodeURIComponent(username)}&token=${token}`;
+
+            // WebSocket bağlantısı
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                updateStatus('connected', `${username}@${targetAddress}`);
+                term.focus();
+            };
+
+            ws.onmessage = function(event) {
+                if (typeof event.data === 'string') {
+                    term.write(event.data);
+                } else {
+                    // Binary data
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        term.write(new Uint8Array(reader.result));
+                    };
+                    reader.readAsArrayBuffer(event.data);
+                }
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                term.write('\r\n\x1b[31mBağlantı hatası!\x1b[0m\r\n');
+                updateStatus('disconnected', 'Hata');
+            };
+
+            ws.onclose = function() {
+                term.write('\r\n\x1b[33mBağlantı kapatıldı.\x1b[0m\r\n');
+                updateStatus('disconnected', 'Bağlantı Kesildi');
+            };
+
+            // Terminal input'unu WebSocket'e gönder
+            term.onData(function(data) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(data);
+                }
+            });
+        }
+
+        function updateStatus(status, info) {
+            const indicator = document.getElementById('status-indicator');
+            const connectionInfo = document.getElementById('connection-info');
+
+            indicator.className = '';
+
+            switch(status) {
+                case 'connected':
+                    indicator.className = 'status-connected';
+                    indicator.textContent = '● Bağlandı';
+                    break;
+                case 'connecting':
+                    indicator.className = 'status-connecting';
+                    indicator.textContent = '● Bağlanıyor...';
+                    break;
+                case 'disconnected':
+                    indicator.className = 'status-disconnected';
+                    indicator.textContent = '● Bağlantı Kesildi';
+                    break;
+            }
+
+            connectionInfo.textContent = info;
+        }
+
+        // Pencere kapatılırken WebSocket'i kapat
+        window.addEventListener('beforeunload', function() {
+            if (ws) {
+                ws.close();
+            }
+        });
+
+        // Username input'a focus ver
+        document.getElementById('username').focus();
+    </script>
+</body>
+</html>

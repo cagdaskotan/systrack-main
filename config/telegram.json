@@ -1,0 +1,11 @@
+{
+  "enabled": false,
+  "bot_token": "",
+  "chat_id": "",
+  "templates": {
+    "ALERT_DOWN": "❌ Service *{{.Service}}* is *DOWN* on *{{.Host}}* ({{.IP}}). Since: {{.Since}}",
+    "ALERT_UP": "✅ Service *{{.Service}}* is *UP* on *{{.Host}}* ({{.IP}})",
+    "NEW_DEVICE_DETECTED": "🆕 New device detected: *{{.Hostname}}* ({{.IP}})",
+    "TEST_MESSAGE": "✅ *Systrack* test message ok.\nTime: {{.Time}}"
+  }
+}

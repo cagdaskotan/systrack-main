@@ -1,0 +1,2285 @@
+﻿<!-- Notification Settings (rev, full, DE) -->
+<div class="notification-settings-view">
+  <!-- Extra styles for table polish -->
+  <style>
+    /* Card polish */
+    .ns-card{box-shadow:0 6px 20px rgba(2,6,23,.06)}
+    .ns-card:hover{box-shadow:0 10px 28px rgba(2,6,23,.08)}
+    /* Table wrapper with rounded corners */
+    .ns-table-wrap{border-radius:14px;overflow:hidden;border:1px solid rgba(148,163,184,.25)}
+    /* Sticky header with blur */
+    .ns-thead-sticky th{
+      position: sticky; top: 0; z-index: 2;
+      backdrop-filter: blur(8px);
+    }
+    /* Zebra rows */
+    .ns-table tbody tr:nth-child(even){background-color:rgba(148,163,184,.06)}
+    /* Hover lift */
+    .ns-row:hover{background-color:rgba(37,99,235,.05)}
+    /* Compact paddings on very small screens */
+    @media (max-width: 480px){
+      .ns-table th, .ns-table td{padding-top:.55rem;padding-bottom:.55rem}
+    }
+    /* Subtle dividers */
+    .ns-table .ns-cell{border-bottom:1px solid rgba(148,163,184,.22)}
+    /* Soft ring on focus/hover for action buttons */
+    .ns-action:focus,.ns-action:hover{box-shadow:0 0 0 3px rgba(59,130,246,.2)}
+    /* Condition panels */
+    .cond-panel{max-height:0;opacity:0;transform:translateY(-6px);overflow:hidden;transition:max-height .25s ease,opacity .25s ease,transform .25s ease;pointer-events:none;margin-top:0}
+    .cond-panel.is-active{max-height:800px;opacity:1;transform:translateY(0);pointer-events:auto;margin-top:.5rem}
+    .cond-status-panel.is-active{margin-top:.8rem}
+  </style>
+
+  <!-- Header / Intro card -->
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl ns-card px-6 py-5 mb-8">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div class="space-y-1">
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Benachrichtigungseinstellungen</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+          Erhalte Benachrichtigungen per E-Mail oder Telegram, wenn deine Ziele online oder offline gehen. Verwalte Vorlagen und Regeln auf dieser Seite.
+        </p>
+        <p id="settings-message" class="text-xs text-gray-500 dark:text-gray-400"></p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Anleitung (Alpine — läuft dank Alpine.initTree auch in der SPA) -->
+        <div x-data="{ open: false, tab: 'telegram' }" @keydown.escape.window="open = false" class="inline-flex">
+          <button type="button" @click="open = true; tab = 'telegram'"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-100 transition">
+            <span class="fas fa-book-open"></span> Anleitung
+          </button>
+
+          <div x-show="open" x-cloak class="fixed inset-0 z-[60]" role="dialog" aria-modal="true">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="open = false"></div>
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+              <div class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl overflow-hidden"
+                   x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" @click.stop>
+
+                <div class="px-6 pt-5 pb-0 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
+                        <span class="fas fa-book-open text-blue-600 dark:text-blue-400 text-sm"></span>
+                      </div>
+                      <div>
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Benachrichtigungs-Anleitung</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Wie erhält man die Telegram Chat-ID und richtet Benachrichtigungen ein?</p>
+                      </div>
+                    </div>
+                    <button type="button" @click="open = false" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors">
+                      <span class="fas fa-times"></span>
+                    </button>
+                  </div>
+                  <div class="flex gap-0 -mb-px">
+                    <button type="button" @click="tab = 'telegram'"
+                            class="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
+                            :class="tab === 'telegram' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'">
+                      <span class="fab fa-telegram-plane text-sm"></span>Telegram Chat-ID
+                    </button>
+                    <button type="button" @click="tab = 'logic'"
+                            class="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
+                            :class="tab === 'logic' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'">
+                      <span class="fas fa-sitemap text-sm"></span>Benachrichtigungslogik
+                    </button>
+                  </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto">
+                  <div x-show="tab === 'telegram'" class="p-6 space-y-5">
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                      Um Benachrichtigungen über Telegram zu erhalten, sind zwei Dinge nötig: <strong class="text-gray-900 dark:text-white">unseren Bot starten</strong> und Ihre eigene <strong class="text-gray-900 dark:text-white">Chat-ID</strong> herausfinden.
+                    </p>
+                    <div class="space-y-3">
+                      <div class="flex items-start gap-3">
+                        <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">Öffnen Sie in Telegram den <strong class="text-gray-900 dark:text-white">SysTrack Bildirim Botu</strong> (<code class="px-1 rounded bg-gray-100 dark:bg-gray-700 text-cyan-700 dark:text-cyan-300">@systrack_alerts_bot</code>) und drücken Sie <strong class="text-gray-900 dark:text-white">Start</strong>. Das ist erforderlich, damit der Bot Ihnen Nachrichten senden darf.</p>
+                      </div>
+                      <div class="flex items-start gap-3">
+                        <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">Öffnen Sie den <strong class="text-gray-900 dark:text-white">User Info</strong>-Bot (<code class="px-1 rounded bg-gray-100 dark:bg-gray-700 text-cyan-700 dark:text-cyan-300">@userinfobot</code>) und drücken Sie <strong class="text-gray-900 dark:text-white">Start</strong>. Der Bot sendet Ihnen eine Zahl, die mit <strong class="text-gray-900 dark:text-white">Id:</strong> beginnt — das ist Ihre Chat-ID.</p>
+                      </div>
+                      <div class="flex items-start gap-3">
+                        <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">Wählen Sie beim Erstellen einer Benachrichtigung <strong class="text-gray-900 dark:text-white">Kanal = Telegram</strong> und tragen Sie diese Chat-ID im Feld <strong class="text-gray-900 dark:text-white">Empfänger</strong> ein. Anschließend mit <strong class="text-gray-900 dark:text-white">Test senden</strong> prüfen.</p>
+                      </div>
+                    </div>
+                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Beispiel — User-Info-Bot-Bildschirm</span>
+                      </div>
+                      <div class="p-4 bg-white dark:bg-gray-800">
+                        <img src="/static/admin/images/telegram.jpeg" alt="Start-Bildschirm des User-Info-Bots" class="rounded-lg border border-gray-200 dark:border-gray-700 max-h-80 mx-auto" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<p class=&quot;text-xs text-gray-500 dark:text-gray-400 text-center&quot;>Bild nicht hinzugefügt (telegram.jpeg).</p>');">
+                      </div>
+                    </div>
+                    <div class="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3">
+                      <p class="text-xs text-amber-800 dark:text-amber-300">
+                        <span class="fas fa-exclamation-triangle mr-1"></span>
+                        Wenn Sie den Bot (<code class="text-amber-900 dark:text-amber-200">@systrack_alerts_bot</code>) nicht mit <strong>Start</strong> starten, erlaubt Telegram keine Nachrichten — selbst bei korrekter Chat-ID.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div x-show="tab === 'logic'" class="p-6 space-y-5">
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                      Eine Benachrichtigungsregel prüft die gewählten Ziele/Sensoren in festgelegten Intervallen und sendet eine Warnung über den gewählten Kanal (E-Mail oder Telegram), <strong class="text-gray-900 dark:text-white">wenn die Bedingung eintritt</strong>.
+                    </p>
+                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Benachrichtigungstypen und ihre Eingaben</span>
+                      </div>
+                      <div class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700/50 text-sm">
+                        <div class="px-4 py-3"><p class="font-medium text-gray-900 dark:text-white"><span class="fas fa-server text-blue-500 mr-1.5"></span>Zielüberwachung</p><p class="text-gray-600 dark:text-gray-300 mt-1">Wird ausgelöst, wenn das/die Ziel(e) <strong>online/offline</strong> gehen oder die <strong>Antwortzeit</strong> den Schwellwert überschreitet. Zielauswahl + (optional) Status-/Antwortzeit-Bedingung.</p></div>
+                        <div class="px-4 py-3"><p class="font-medium text-gray-900 dark:text-white"><span class="fas fa-thermometer-half text-cyan-500 mr-1.5"></span>Luftsensor</p><p class="text-gray-600 dark:text-gray-300 mt-1">Warnt, wenn <strong>Temperatur, Feuchte, Druck oder Luftqualität (IAQ)</strong> einen Schwellwert überschreitet. Sensorseriennummer + Feld + Operator + Schwellwert.</p></div>
+                        <div class="px-4 py-3"><p class="font-medium text-gray-900 dark:text-white"><span class="fas fa-tint text-blue-500 mr-1.5"></span>Flüssigkeitssensor</p><p class="text-gray-600 dark:text-gray-300 mt-1">Warnt, wenn die Flüssigkeitsstand-/Zustandsbedingung erfüllt ist.</p></div>
+                        <div class="px-4 py-3"><p class="font-medium text-gray-900 dark:text-white"><span class="fas fa-video text-purple-500 mr-1.5"></span>Kamera</p><p class="text-gray-600 dark:text-gray-300 mt-1">Sendet Warnungen bei kamerabezogenen Ereignissen.</p></div>
+                        <div class="px-4 py-3"><p class="font-medium text-gray-900 dark:text-white"><span class="fas fa-shield-alt text-red-500 mr-1.5"></span>Crack-Erkennung</p><p class="text-gray-600 dark:text-gray-300 mt-1">Warnt, wenn auf einem Gerät nicht lizenzierte/gecrackte Software erkannt wird.</p></div>
+                      </div>
+                    </div>
+                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gemeinsame Felder jeder Benachrichtigung</span>
+                      </div>
+                      <div class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700/50 text-sm">
+                        <div class="flex items-start gap-3 px-4 py-2.5"><span class="fas fa-tag text-gray-400 mt-0.5"></span><span class="text-gray-700 dark:text-gray-300"><strong class="text-gray-900 dark:text-white">Name</strong> — kurzer Name der Regel.</span></div>
+                        <div class="flex items-start gap-3 px-4 py-2.5"><span class="fas fa-paper-plane text-gray-400 mt-0.5"></span><span class="text-gray-700 dark:text-gray-300"><strong class="text-gray-900 dark:text-white">Kanal</strong> — E-Mail oder Telegram.</span></div>
+                        <div class="flex items-start gap-3 px-4 py-2.5"><span class="fas fa-users text-gray-400 mt-0.5"></span><span class="text-gray-700 dark:text-gray-300"><strong class="text-gray-900 dark:text-white">Empfänger</strong> — E-Mail-Adresse(n) bzw. Telegram Chat-ID. Mit <strong>Test senden</strong> prüfen.</span></div>
+                        <div class="flex items-start gap-3 px-4 py-2.5"><span class="fas fa-clock text-gray-400 mt-0.5"></span><span class="text-gray-700 dark:text-gray-300"><strong class="text-gray-900 dark:text-white">Häufigkeit</strong> — Prüfintervall (z. B. 10 Min.). Mit <strong class="text-gray-900 dark:text-white">Intelligent (abnehmend)</strong>: sofortige Meldung beim Offline-Gehen, danach immer seltenere Erinnerungen (stündlich → alle 2 Std. → täglich) und bei Rückkehr die Gesamtausfallzeit — verhindert Benachrichtigungsfluten bei langen Ausfällen.</span></div>
+                        <div class="flex items-start gap-3 px-4 py-2.5"><span class="fas fa-file-alt text-gray-400 mt-0.5"></span><span class="text-gray-700 dark:text-gray-300"><strong class="text-gray-900 dark:text-white">Vorlage (optional)</strong> — passt den Nachrichtentext an; sonst Standardtext.</span></div>
+                      </div>
+                    </div>
+                    <div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3">
+                      <p class="text-xs text-blue-800 dark:text-blue-300"><span class="fas fa-info-circle mr-1"></span>Pro Regel sind maximal <strong>50 Ziele</strong> möglich. Für mehr Ziele mehrere Regeln erstellen.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-open-create"
+                x-show="window.canEditModule && window.canEditModule('notification_settings')"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium text-white shadow-sm transition">
+          <svg class="w-4 h-4" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          Benachrichtigung erstellen
+        </button>
+        <!-- Hidden button for JS usage -->
+        <button id="btn-test-email" class="hidden"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top grid (left: channel/settings card, right: rules list) -->
+  <section class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Email channel settings -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 lg:col-span-1 hidden" id="email-settings-card">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+            <i class="fas fa-envelope text-blue-600 dark:text-blue-300"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">E-Mail-Kanal</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">SMTP- & Empfänger-Einstellungen</p>
+          </div>
+        </div>
+        <label class="inline-flex items-center cursor-pointer">
+          <input id="email-enabled" type="checkbox" class="sr-only peer">
+          <span class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></span>
+        </label>
+      </div>
+      <div class="p-6 space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Empfänger-E-Mail</label>
+          <input id="email-recipient" type="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="user@example.com" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Benachrichtigungstypen</label>
+          <div class="space-y-2 bg-gray-50 dark:bg-gray-700/40 p-3 rounded-lg border border-gray-100 dark:border-gray-600">
+            <label class="inline-flex items-center gap-2">
+              <input id="type-target-status" type="checkbox" class="rounded text-blue-600">
+              <span class="text-sm text-gray-700 dark:text-gray-200">Zielstatus-Änderung (online/offline)</span>
+            </label>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btn-save-settings" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Speichern</button>
+        </div>
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50">
+          <details class="bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-700">
+            <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200 px-4 py-3 flex items-center justify-between">
+              E-Mail-Server-Einstellungen
+              <span class="text-xs text-gray-400 dark:text-gray-500">Einblenden / Ausblenden</span>
+            </summary>
+            <div class="px-4 pt-3 pb-4 space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">SMTP-Host</label>
+                  <input id="smtp-host" autocomplete="off" autocapitalize="off" spellcheck="false" class="w-full px-3 py-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">SMTP-Port</label>
+                  <input id="smtp-port" type="number" value="587" autocomplete="off" inputmode="numeric" class="w-full px-3 py-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
+                </div>
+                <div class="flex items-end">
+                  <label class="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-300">
+                    <input id="smtp-tls" type="checkbox" class="rounded text-blue-600" checked> TLS
+                  </label>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Benutzername</label>
+                  <input id="smtp-user" autocomplete="off" autocapitalize="off" spellcheck="false" class="w-full px-3 py-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Passwort</label>
+                  <input id="smtp-pass" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false" class="w-full px-3 py-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Absender-E-Mail</label>
+                  <input id="smtp-from" autocomplete="off" autocapitalize="off" spellcheck="false" class="w-full px-3 py-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 text-sm" placeholder="noreply@domain.com">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Absendername</label>
+                  <input id="smtp-from-name" autocomplete="off" autocapitalize="off" spellcheck="false" class="w-full px-3 py-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 text-sm" placeholder="SysTrack">
+                </div>
+              </div>
+              <div class="flex items-center gap-3 pt-1">
+                <button id="btn-save-smtp" class="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs">Servereinstellungen speichern</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rules list -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl ns-card border border-gray-200 dark:border-gray-700 lg:col-span-4">
+      <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div class="flex items-center gap-3">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Gespeicherte Benachrichtigungen</h3>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Verwalte alle deine Regeln; Status-, Ziel- und Kanaldaten werden hier angezeigt.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btn-bulk-delete" x-show="window.canEditModule && window.canEditModule('notification_settings')" class="hidden items-center gap-2 px-3 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <i class="fas fa-trash text-xs"></i>
+            <span id="bulk-delete-text">Mehrere löschen</span>
+          </button>
+          <button id="btn-refresh-rules" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+            <i class="fas fa-sync text-xs"></i>
+            Aktualisieren
+          </button>
+        </div>
+      </div>
+
+      <!-- DESKTOP LIST -->
+      <div id="rules-list" class="hidden md:block px-6 py-6">
+        <div class="rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 px-6 py-8 text-center space-y-3">
+          <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-300">
+            <i class="fas fa-clipboard-list text-lg"></i>
+          </div>
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Einträge werden geladen...</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Wenn keine Einträge angezeigt werden, oben rechts aktualisieren oder eine neue Regel erstellen.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MOBILE LIST -->
+      <div id="rules-list-mobile" class="md:hidden px-4 py-4">
+        <div class="rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 px-6 py-8 text-center space-y-3">
+          <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-300">
+            <i class="fas fa-clipboard-list text-lg"></i>
+          </div>
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Einträge werden geladen...</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Wenn nichts angezeigt wird, aktualisiere oder erstelle eine neue Regel.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CREATE MODAL -->
+  <div id="create-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Neue Benachrichtigung</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Erstelle eine Regel für bestimmte oder alle Ziele.</p>
+        </div>
+        <button id="btn-close-create" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 rounded-full h-8 w-8 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Name der Benachrichtigung</label>
+          <input id="rule-name" type="text" class="w-full h-10 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="z. B. Ziel offline-Alarm">
+        </div>
+
+        <div class="gap-4">
+          <div class="space-y-2">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div class="flex items-center gap-2">
+                <label class="block text-sm font-medium text-gray-800 dark:text-white">Zielauswahl</label>
+                <div class="relative group">
+                  <button type="button"
+                          class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-[10px] font-bold leading-none text-blue-700 transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                          aria-label="Information zur Auswahlbegrenzung">
+                    <span class="leading-none">i</span>
+                  </button>
+                  <div class="pointer-events-none absolute left-0 top-full z-[80] mt-2 hidden w-72 sm:w-80 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs leading-5 text-gray-700 shadow-xl group-hover:block group-focus-within:block dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                    Wenn zu viele Ziele gleichzeitig geprüft werden, kann die Vorbereitung und Zustellung von Benachrichtigungen langsamer werden.
+                    Deshalb ist die Auswahl auf maximal <strong>50 Ziele</strong> begrenzt.
+                  </div>
+                </div>
+              </div>
+
+              <div class="w-full sm:w-64">
+                <label for="rule-target-filter" class="sr-only">Nach Tag filtern</label>
+                <div id="rule-target-filter-wrap" class="relative">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 dark:text-gray-500">
+                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 103.478 9.8l3.611 3.611a.75.75 0 101.06-1.06l-3.61-3.612A5.5 5.5 0 009 3.5zm-4 5.5a4 4 0 118 0 4 4 0 01-8 0z" clip-rule="evenodd"/></svg>
+                  </div>
+                  <input id="rule-target-filter" type="text" class="w-full h-9 pl-9 pr-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100" placeholder="Nach Tag filtern">
+                </div>
+              </div>
+            </div>
+
+            <div id="rule-target-picker" class="relative">
+              <button type="button" id="rule-target-toggle" class="w-full h-11 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-left flex items-center justify-between text-sm text-gray-900 dark:text-gray-100">
+                <span id="rule-target-label" class="truncate">Ziel auswählen</span>
+                <svg class="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z"/></svg>
+              </button>
+              <div id="rule-target-panel" class="absolute inset-x-0 mt-2 z-30 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-2 hidden">
+                <div class="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                  <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-100">
+                    <input id="rule-target-select-all" type="checkbox" class="rounded text-blue-600">
+                    Alle auswählen
+                  </label>
+                  <span id="rule-target-counter" class="text-xs text-gray-500 dark:text-gray-400">0/0</span>
+                </div>
+                <div id="rule-target-list" class="max-h-96 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                  <div class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">Ziele werden geladen...</div>
+                </div>
+              </div>
+            </div>
+
+            <p id="rule-target-helper" class="text-xs text-gray-500 dark:text-gray-400">Mit Text filtern; du kannst ein oder mehrere Ziele auswählen (maximal 50).</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Kanal</label>
+            <select id="rule-channel" class="w-full h-10 px-3 py-2 rounded-md border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              <option value="email">E-Mail</option>
+              <option value="telegram">Telegram</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Intervall</label>
+            <select id="rule-interval" class="w-full h-10 px-3 py-2 rounded-md border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              <option value="backoff">Intelligent (abnehmend)</option>
+              <option value="10" selected>10 Minuten</option>
+              <option value="20">20 Minuten</option>
+              <option value="30">30 Minuten</option>
+              <option value="60">60 Minuten</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Vorlage (optional)</label>
+            <select id="rule-template" class="w-full h-10 px-3 py-2 rounded-md border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              <option value="">— Standardvorlage —</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Infokarte: Intelligentes (abnehmendes) Intervall — sichtbar bei Auswahl -->
+        <div id="backoff-info" class="hidden mt-3 rounded-xl border border-cyan-200 dark:border-cyan-800 bg-cyan-50/70 dark:bg-cyan-900/20 overflow-hidden">
+          <div class="flex items-center gap-2 px-4 py-2 border-b border-cyan-200/70 dark:border-cyan-800/60 bg-cyan-100/50 dark:bg-cyan-900/30">
+            <span class="fas fa-brain text-cyan-600 dark:text-cyan-400"></span>
+            <span class="text-xs font-semibold text-cyan-900 dark:text-cyan-200">Wie funktioniert das intelligente (abnehmende) Intervall?</span>
+          </div>
+          <div class="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs text-cyan-900 dark:text-cyan-200">
+            <div class="flex items-start gap-2"><span class="fas fa-bolt w-4 text-center text-red-500 mt-0.5"></span><span><strong>Sobald das Gerät offline geht</strong>, wird sofort benachrichtigt.</span></div>
+            <div class="flex items-start gap-2"><span class="fas fa-clock w-4 text-center text-cyan-600 dark:text-cyan-400 mt-0.5"></span><span>Erste 3 Stunden: <strong>stündlich</strong> eine Erinnerung.</span></div>
+            <div class="flex items-start gap-2"><span class="fas fa-hourglass-half w-4 text-center text-cyan-600 dark:text-cyan-400 mt-0.5"></span><span>3–24 Stunden: <strong>alle 2 Stunden</strong>.</span></div>
+            <div class="flex items-start gap-2"><span class="fas fa-calendar-day w-4 text-center text-cyan-600 dark:text-cyan-400 mt-0.5"></span><span>Nach 24 Stunden: <strong>täglich</strong>.</span></div>
+            <div class="flex items-start gap-2 sm:col-span-2"><span class="fas fa-check-circle w-4 text-center text-emerald-500 mt-0.5"></span><span><strong>Bei Rückkehr online</strong> sofortige Benachrichtigung mit der <strong>Gesamtausfallzeit</strong>.</span></div>
+          </div>
+          <div class="px-4 py-1.5 border-t border-cyan-200/70 dark:border-cyan-800/60 text-[11px] text-cyan-700 dark:text-cyan-400">
+            Verhindert Benachrichtigungsfluten bei langen Ausfällen. Nur für Zielüberwachung + Status-Bedingung.
+          </div>
+        </div>
+
+        <div class="mt-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 px-4 py-2">
+          <div class="flex items-center justify-between gap-4">
+            <label for="rule-cond-field" class="text-sm font-semibold text-gray-800 dark:text-gray-200">Bedingungsfeld</label>
+            <select id="rule-cond-field" class="w-full max-w-md h-11 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              <option value="status">Status</option>
+              <option value="response_time_ms">Antwortzeit (ms)</option>
+              <option value="cpu_percent">CPU (%)</option>
+              <option value="ram_gb">RAM (GB)</option>
+              <option value="disk_gb">Disk (GB)</option>
+              <option value="temperature_c">Temperatur (°C)</option>
+              <option value="services">Dienste</option>
+            </select>
+          </div>
+
+          <div id="cond-status-wrap" class="cond-panel cond-status-panel rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/40 px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+            Benachrichtigung wird gesendet, wenn das Ziel offline/online wechselt.
+          </div>
+
+          <div id="cond-rt-wrap" class="cond-panel grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Operator</label>
+              <select id="rule-cond-operator" class="w-full h-10 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" disabled>
+                <option value="<">&lt;</option>
+                <option value="<=">&le;</option>
+                <option value="=">=</option>
+                <option value=">=">&ge;</option>
+                <option value=">">&gt;</option>
+                <option value="!=">!=</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1" id="cond-value-label">Wert</label>
+              <input id="rule-cond-value" type="number" min="0" class="w-full h-10 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="200" disabled>
+            </div>
+            <p id="cond-rt-help" class="cond-panel sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">Beispiel: Antwortzeit (ms) &lt; 200</p>
+            <p id="cond-metric-note" class="cond-panel sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">
+              Diese Bedingung funktioniert, wenn das Ziel auf der Server-Status-Seite Messwerte liefern kann. Ohne SNMP oder Servicedaten wird keine Benachrichtigung gesendet.
+            </p>
+          </div>
+
+          <div id="cond-services-wrap" class="cond-panel rounded-xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 px-4 py-3">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div class="text-sm font-semibold text-gray-800 dark:text-gray-200">Dienstauswahl</div>
+              <div class="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-300">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input id="service-mode-all" type="checkbox" class="rounded text-blue-600">
+                  <span>Alle</span>
+                </label>
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input id="service-mode-monitored" type="checkbox" class="rounded text-blue-600">
+                  <span>Überwacht</span>
+                </label>
+              </div>
+            </div>
+            <div id="rule-service-list" class="mt-3 max-h-56 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900/40">
+              <div class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">Dienstliste wird geladen...</div>
+            </div>
+            <p id="rule-service-helper" class="mt-2 text-xs text-gray-500 dark:text-gray-400">Überwachte Dienste werden automatisch ausgewählt. Sie können sie bei Bedarf einzeln ändern.</p>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Empfänger</label>
+          <input id="rule-recipients" type="text" class=" w-full h-10 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="user@example.com, second@example.com">
+          <p id="rule-recipients-help" class="text-xs text-gray-500 dark:text-gray-400 mt-1">E-Mail-Adressen mit Komma trennen. Für Telegram die Chat-ID eingeben.</p>
+          <div class="mt-2 flex items-center gap-2 flex-wrap">
+            <button type="button" id="btn-test-create-recipients" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition disabled:opacity-60 disabled:cursor-not-allowed">
+              <i class="fas fa-paper-plane text-[11px]"></i> Test senden
+            </button>
+            <span id="test-rule-result" class="text-xs"></span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+        <button id="btn-cancel-create" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">Abbrechen</button>
+        <button id="btn-submit-create" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">Erstellen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT MODAL -->
+  <div id="edit-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-[60]">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Benachrichtigung bearbeiten</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Felder der bestehenden Regel aktualisieren.</p>
+        </div>
+        <button id="btn-close-edit" class="text-gray-400 hover:text-gray-200 rounded-full h-8 w-8 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <input type="hidden" id="edit-rule-id">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Name der Benachrichtigung</label>
+          <input id="edit-rule-name" type="text" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Benachrichtigungstyp</label>
+            <select id="edit-rule-type" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              <option value="target">Ziel</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Kanal</label>
+            <select id="edit-rule-channel" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              <option value="email">E-Mail</option>
+              <option value="telegram">Telegram</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md p-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Bedingungsfeld</label>
+              <select id="edit-rule-cond-field" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                <option value="">- Auswählen -</option>
+                <option value="status">Status</option>
+                <option value="response_time_ms">Antwortzeit (ms)</option>
+              </select>
+            </div>
+            <div id="edit-cond-rt-wrap" class="grid grid-cols-2 gap-2 md:col-span-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Operator</label>
+                <select id="edit-rule-cond-operator" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" disabled>
+                  <option value="<">&lt;</option>
+                  <option value="<=">&le;</option>
+                  <option value="=">=</option>
+                  <option value=">=">&ge;</option>
+                  <option value=">">&gt;</option>
+                  <option value="!=">!=</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Wert (ms)</label>
+                <input id="edit-rule-cond-value" type="number" min="0" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="200" disabled>
+              </div>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Beispiel: Antwortzeit (ms) &lt; 200</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <label class="block text-sm font-medium text-gray-800 dark:text-white">Zielauswahl</label>
+              <label class="inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+                <input id="edit-rule-all-targets" type="checkbox" class="rounded text-blue-600"> Alle Ziele
+              </label>
+            </div>
+            <select id="edit-rule-target-select" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              <option value="">— Ziel auswählen —</option>
+            </select>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Bei Bedarf ein einzelnes Gerät auswählen.</p>
+          </div>
+
+          <div class="space-y-2">
+            <div>
+              <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Intervall</label>
+              <select id="edit-rule-interval" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                <option value="backoff">Intelligent (abnehmend)</option>
+                <option value="10">10 Minuten</option>
+                <option value="20">20 Minuten</option>
+                <option value="30">30 Minuten</option>
+                <option value="60">60 Minuten</option>
+              </select>
+              <div id="edit-backoff-info" class="hidden mt-2 rounded-xl border border-cyan-200 dark:border-cyan-800 bg-cyan-50/70 dark:bg-cyan-900/20 overflow-hidden">
+                <div class="flex items-center gap-2 px-3 py-1.5 border-b border-cyan-200/70 dark:border-cyan-800/60 bg-cyan-100/50 dark:bg-cyan-900/30">
+                  <span class="fas fa-brain text-cyan-600 dark:text-cyan-400 text-xs"></span>
+                  <span class="text-[11px] font-semibold text-cyan-900 dark:text-cyan-200">Wie funktioniert das intelligente (abnehmende) Intervall?</span>
+                </div>
+                <div class="px-3 py-2 space-y-1.5 text-[11px] leading-4 text-cyan-900 dark:text-cyan-200">
+                  <div class="flex items-start gap-2"><span class="fas fa-bolt w-3.5 text-center text-red-500 mt-0.5"></span><span><strong>Sobald offline</strong> — sofortige Benachrichtigung.</span></div>
+                  <div class="flex items-start gap-2"><span class="fas fa-clock w-3.5 text-center text-cyan-600 dark:text-cyan-400 mt-0.5"></span><span>Erste 3 Std.: <strong>stündlich</strong> · 3–24 Std.: <strong>alle 2 Std.</strong> · danach: <strong>täglich</strong>.</span></div>
+                  <div class="flex items-start gap-2"><span class="fas fa-check-circle w-3.5 text-center text-emerald-500 mt-0.5"></span><span><strong>Bei Rückkehr online</strong> sofort + <strong>Gesamtausfallzeit</strong>.</span></div>
+                </div>
+                <div class="px-3 py-1 border-t border-cyan-200/70 dark:border-cyan-800/60 text-[10px] text-cyan-700 dark:text-cyan-400">
+                  Nur für Zielüberwachung + Status-Bedingung.
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Vorlage (optional)</label>
+              <select id="edit-rule-template" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                <option value="">— Keine —</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Empfänger</label>
+          <input id="edit-rule-recipients" type="text" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+          <div class="mt-2 flex items-center gap-2 flex-wrap">
+            <button type="button" id="btn-test-edit-recipients" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition disabled:opacity-60 disabled:cursor-not-allowed">
+              <i class="fas fa-paper-plane text-[11px]"></i> Test senden
+            </button>
+            <span id="test-edit-result" class="text-xs"></span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 bg-gray-50/60 dark:bg-gray-800/40 rounded-b-xl">
+        <button id="btn-delete-from-edit" class="px-3 py-2 bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-200 rounded-md text-sm">Löschen</button>
+        <div class="flex items-center gap-3">
+          <button id="btn-cancel-edit" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">Abbrechen</button>
+          <button id="btn-submit-edit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Modal -->
+  <div id="delete-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-[70]">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-5">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Benachrichtigung löschen</h3>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Du bist dabei, diese Benachrichtigung zu löschen. Diese Aktion kann nicht rückgängig gemacht werden.</p>
+        <input type="hidden" id="delete-rule-id" />
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button id="btn-cancel-delete" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">Abbrechen</button>
+          <button id="btn-confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm">Ja, löschen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Delete Modal -->
+  <div id="bulk-delete-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-[70]">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-5">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Ausgewählte Benachrichtigungen löschen</h3>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          Du bist dabei, <span id="bulk-delete-count">0</span> Benachrichtigungen zu löschen. Diese Aktion kann nicht rückgängig gemacht werden. Bist du sicher?
+        </p>
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button id="btn-cancel-bulk-delete" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">Abbrechen</button>
+          <button id="btn-confirm-bulk-delete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm">Ja, löschen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Email Modal -->
+  <div id="test-email-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Test-E-Mail senden</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Sende eine Testnachricht, um deine SMTP-Einstellungen zu überprüfen.</p>
+        </div>
+        <button id="btn-close-test-email" class="text-gray-500 hover:text-gray-700">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-white mb-1">Empfänger-E-Mail</label>
+          <input id="test-recipient" type="email" class="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="user@example.com">
+        </div>
+        <div class="flex items-center justify-end gap-3">
+          <button id="btn-cancel-test-email" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">Abbrechen</button>
+          <button id="btn-test-email-send" class="px-3 py-1.5 bg-gray-600 text-white rounded-md text-sm">Senden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JS (original functions kept as-is, only renderRulesTable below is visually enhanced) -->
+<script>
+  function getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  }
+
+  async function loadSettings() {
+    try {
+      const res = await fetch('/api/new-notifications/settings', { headers: getAuthHeaders() });
+      if (!res.ok) {
+        console.warn('Settings API returned', res.status, '- skipping settings load');
+        return;
+      }
+      const data = await res.json();
+      const emailEnabled = data?.data?.email_enabled ?? false;
+      const emailRecipient = data?.data?.email_recipient ?? '';
+      const types = data?.data?.types ?? [];
+      const emailEnabledEl = document.getElementById('email-enabled');
+      if (emailEnabledEl) emailEnabledEl.checked = !!emailEnabled;
+      const emailRecipientEl = document.getElementById('email-recipient');
+      if (emailRecipientEl) emailRecipientEl.value = emailRecipient || '';
+      const typeTargetStatusEl = document.getElementById('type-target-status');
+      if (typeTargetStatusEl) typeTargetStatusEl.checked = Array.isArray(types) ? types.includes('target_status_change') : false;
+    } catch (e) {
+      console.error('Load settings error', e);
+    }
+  }
+
+  async function saveSettings() {
+    const payload = {
+      channel: 'email',
+      is_enabled: document.getElementById('email-enabled')?.checked ?? false,
+      recipient: (document.getElementById('email-recipient')?.value || '').trim(),
+      types: []
+    };
+    if (document.getElementById('type-target-status')?.checked) payload.types.push('target_status_change');
+
+    try {
+      const res = await fetch('/api/new-notifications/settings', {
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      const ok = res.ok && (data.success === undefined || data.success === true);
+      document.getElementById('settings-message').textContent = ok ? 'Einstellungen gespeichert.' : (data.error || 'Die Einstellungen konnten nicht gespeichert werden.');
+    } catch (e) {
+      document.getElementById('settings-message').textContent = 'Die Einstellungen konnten nicht gespeichert werden: ' + e.message;
+    }
+  }
+
+  async function sendTestEmail() {
+    const topRecipient = document.getElementById('email-recipient');
+    const modalRecipient = document.getElementById('test-recipient');
+    const recipient = (modalRecipient?.value || topRecipient?.value || '').trim();
+    if (!recipient) {
+      document.getElementById('settings-message').textContent = 'Geben Sie eine E-Mail-Adresse für den Testempfänger ein.';
+      return;
+    }
+    try {
+      const data = await res.json().catch(() => ({}));
+      const ok = res.ok && (data.success === undefined || data.success === true);
+      document.getElementById('settings-message').textContent = ok ? 'Test-E-Mail gesendet.' : (data.error || 'Der Test konnte nicht gesendet werden.');
+    } catch (e) {
+      document.getElementById('settings-message').textContent = 'Der Test konnte nicht gesendet werden: ' + e.message;
+    }
+  }
+
+  // Sendet je nach gewähltem Kanal (E-Mail/Telegram) eine ECHTE Testbenachrichtigung
+  // an den ersten Empfänger. Ladezustand + Sperre bei laufender Anfrage + kurze
+  // Abklingzeit (Cooldown) verhindern Spam; das Ergebnis (inkl. genauer Provider-Fehler)
+  // wird inline angezeigt. Buttons werden in init gebunden (Inline-onclick geht hier nicht).
+  const TEST_COOLDOWN_MS = 6000;
+  async function runNotificationTest(opts) {
+    const { channelSelId, recipientsInputId, resultElId, button } = opts;
+    const resultEl = document.getElementById(resultElId);
+    const setMsg = (text, cls) => { if (resultEl) { resultEl.textContent = text; resultEl.className = 'text-xs ' + cls; } };
+
+    if (button && button.dataset.busy === '1') return;
+
+    const last = Number(button?.dataset.lastTest || 0);
+    const waitMs = TEST_COOLDOWN_MS - (Date.now() - last);
+    if (last && waitMs > 0) {
+      setMsg('Zu häufig versucht. In ' + Math.ceil(waitMs / 1000) + ' Sek. erneut versuchen.', 'text-amber-600 dark:text-amber-400');
+      return;
+    }
+
+    const channel = (document.getElementById(channelSelId)?.value || 'email').trim();
+    const raw = (document.getElementById(recipientsInputId)?.value || '').trim();
+    const first = raw.split(',').map(s => s.trim()).filter(Boolean)[0];
+    if (!first) {
+      setMsg(channel === 'telegram' ? 'Zuerst eine Chat-ID eingeben.' : 'Zuerst eine Empfänger-E-Mail eingeben.', 'text-amber-600 dark:text-amber-400');
+      return;
+    }
+
+    if (button) {
+      button.dataset.busy = '1';
+      button.disabled = true;
+      button.dataset.orig = button.innerHTML;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin text-[11px]"></i> Wird gesendet…';
+    }
+    setMsg('Wird gesendet…', 'text-gray-500 dark:text-gray-400');
+
+    try {
+      const url = channel === 'telegram' ? '/api/new-notifications/test-telegram' : '/api/new-notifications/test-email';
+      const body = channel === 'telegram' ? { chat_id: first } : { recipient: first };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        setMsg(channel === 'telegram'
+          ? '✓ Testbenachrichtigung gesendet — prüfen Sie Telegram.'
+          : '✓ Testbenachrichtigung gesendet — prüfen Sie Ihren Posteingang.', 'text-green-600 dark:text-green-400');
+      } else {
+        setMsg('✗ ' + (data.error || 'Test konnte nicht gesendet werden'), 'text-red-600 dark:text-red-400');
+      }
+    } catch (e) {
+      setMsg('✗ Anfrage fehlgeschlagen: ' + e.message, 'text-red-600 dark:text-red-400');
+    } finally {
+      if (button) {
+        button.dataset.busy = '0';
+        button.dataset.lastTest = String(Date.now());
+        button.disabled = false;
+        if (button.dataset.orig) button.innerHTML = button.dataset.orig;
+      }
+    }
+  }
+  window.runNotificationTest = runNotificationTest;
+
+  const channelStyleMap = {
+    email: {
+      label: 'E-Mail',
+      icon: 'fas fa-envelope',
+      classes: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-200 dark:border-blue-400/40'
+    },
+    telegram: {
+      label: 'Telegram',
+      icon: 'fab fa-telegram-plane',
+      classes: 'bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-200 dark:border-cyan-300/40'
+    },
+    whatsapp: {
+      label: 'WhatsApp',
+      icon: 'fab fa-whatsapp',
+      classes: 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-500/10 dark:text-green-200 dark:border-green-400/40'
+    },
+    webhook: {
+      label: 'Webhook',
+      icon: 'fas fa-link',
+      classes: 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-500/10 dark:text-purple-200 dark:border-purple-400/40'
+    }
+  };
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderChannelBadge(channel) {
+    const meta = channelStyleMap[channel] || {
+      label: (channel || 'Bilinmiyor'),
+      icon: 'fas fa-signal',
+      classes: 'bg-gray-100 text-gray-700 border border-gray-200 dark:bg-gray-700/60 dark:text-gray-200 dark:border-gray-600'
+    };
+    return `<span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${meta.classes}">
+      <i class="${meta.icon}"></i>
+      ${escapeHtml(meta.label)}
+    </span>`;
+  }
+
+  function renderStatusBadge(isActive) {
+    if (isActive) {
+      return `<span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-400/40">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        Aktiv
+      </span>`;
+    }
+    return `<span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-300 dark:border-gray-600">
+      <span class="inline-block w-2 h-2 rounded-full bg-gray-400"></span>
+      Passiv
+    </span>`;
+  }
+
+  function renderRecipientsChips(recipients) {
+    if (!Array.isArray(recipients) || recipients.length === 0) {
+      return '<span class="text-sm text-gray-400 dark:text-gray-500">-</span>';
+    }
+    const list = recipients.map(rec => escapeHtml(rec)).join(', ');
+    return `<div class="text-sm text-gray-700 dark:text-gray-200">${list}</div>`;
+  }
+
+  function formatInterval(minutes) {
+    if (!minutes || Number(minutes) <= 0) return 'Sofort';
+    return `${minutes} min`;
+  }
+
+  // Regeln im intelligenten (abnehmenden) Modus werden in der Liste entsprechend beschriftet
+  function ruleIsBackoff(rule) {
+    const conds = Array.isArray(rule?.conditions) ? rule.conditions : [];
+    return conds.some(c => c && String(c.field || '').toLowerCase() === 'schedule_mode' && String(c.value || '').toLowerCase() === 'backoff');
+  }
+  function ruleIntervalLabel(rule) {
+    return ruleIsBackoff(rule) ? 'Intelligent (abnehmend)' : formatInterval(rule.schedule_interval_minutes);
+  }
+
+  function formatDateTime(input) {
+    if (!input) return '—';
+    const date = new Date(input);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleString('tr-TR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function pickCondition(raw) {
+    if (!raw) return null;
+    if (Array.isArray(raw)) {
+      if (raw.length === 0) return null;
+      return pickCondition(raw[0]);
+    }
+    if (typeof raw === 'object') {
+      if (raw.field || raw.operator || raw.value) return raw;
+      if (Array.isArray(raw.conditions)) return pickCondition(raw.conditions);
+      if (Array.isArray(raw.rules)) return pickCondition(raw.rules);
+    }
+    return null;
+  }
+
+  function describeCondition(cond) {
+    if (!cond) return 'Bedingung nicht definiert';
+    const field = (cond.field || cond.name || '').toLowerCase();
+    const value = cond.value ?? '';
+    const operator = cond.operator || '=';
+    if (field === 'status') {
+      const statusMap = { fail: 'Fehler', ok: 'Erfolgreich', offline: 'Offline', online: 'Online' };
+      const label = statusMap[String(value).toLowerCase()] || escapeHtml(value);
+      return `Status ${operator} ${label}`;
+    }
+    if (field === 'response_time_ms') {
+      return `Antwort ${operator} ${value} ms`;
+    }
+    if (!field) return 'Bedingung nicht definiert';
+    return `${escapeHtml(field)} ${operator} ${escapeHtml(value)}`;
+  }
+
+  function renderConditionBadge(rule) {
+    const cond = pickCondition(rule?.conditions);
+    const text = describeCondition(cond);
+    return `<span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-400/40">
+      <i class="fas fa-filter"></i>
+      ${text}
+    </span>`;
+  }
+
+  function renderRulesEmpty() {
+    return `
+      <div class="rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 px-6 py-10 text-center space-y-3">
+        <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300">
+          <i class="fas fa-clipboard-check"></i>
+        </div>
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Es gibt noch keine Benachrichtigungsregeln.</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Sie können mit der Schaltfläche „Benachrichtigung erstellen“ direkt darüber eine neue Regel hinzufügen.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRulesLoading() {
+    return `
+      <div class="rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 px-6 py-10 text-center space-y-3">
+        <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-300">
+          <i class="fas fa-clipboard-list text-lg"></i>
+        </div>
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Datensätze werden geladen...</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Falls der Datensatz nicht sichtbar ist, können Sie ihn oben rechts aktualisieren oder eine neue Regel erstellen.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRulesError(message) {
+    return `
+      <div class="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/40 px-6 py-8 text-center space-y-2">
+        <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <p class="text-sm font-medium text-red-700 dark:text-red-200">Die Datensätze konnten nicht abgerufen werden.</p>
+        <p class="text-xs text-red-600 dark:text-red-300">${escapeHtml(message || 'unbekannter Fehler')}</p>
+      </div>
+    `;
+  }
+
+  /* >>> ENHANCED TABLE RENDER <<< */
+  function renderRulesTable(rules) {
+    console.log('renderRulesTable called with', rules.length, 'rules');
+    if (!Array.isArray(rules) || rules.length === 0) {
+      return renderRulesEmpty();
+    }
+
+    // Check edit permission for notification_settings module
+    const canEdit = window.canEditModule && window.canEditModule('notification_settings');
+
+    const rows = rules.map((rule) => {
+      const name = escapeHtml(rule.name || 'Anonyme Benachrichtigung');
+      const channel = renderChannelBadge(rule.channel);
+      const recipients = renderRecipientsChips(rule.recipients);
+      const interval = ruleIntervalLabel(rule);
+      const conditionBadge = renderConditionBadge(rule);
+      const lastSent = escapeHtml(formatDateTime(rule.last_sent_at));
+      const status = renderStatusBadge(rule.is_active);
+      const targetText = rule.target_id != null ? `Ziel #${rule.target_id}` : 'Alle Ziele';
+      const templateText = rule.template_id != null ? `Vorlage #${rule.template_id}` : 'Standardvorlage';
+
+      return `
+        <tr class="ns-row transition">
+          <td class="px-4 py-3 ns-cell align-top text-center">
+            ${canEdit ? `<input type="checkbox" class="rule-checkbox rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" data-rule-id="${escapeHtml(rule.id)}">` : ''}
+          </td>
+          <td class="px-4 py-3 ns-cell align-top">
+            <div class="space-y-1 text-sm">
+              <div class="font-semibold text-gray-900 dark:text-gray-100">${name}</div>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                <span class="inline-flex items-center gap-1" title="${escapeHtml(targetText)}">
+                  <i class="fas fa-crosshairs"></i>${escapeHtml(targetText)}
+                </span>
+                <span class="text-gray-300 dark:text-gray-600">•</span>
+                <span class="inline-flex items-center gap-1" title="${escapeHtml(templateText)}">
+                  <i class="fas fa-layer-group"></i>${escapeHtml(templateText)}
+                </span>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 ns-cell align-top whitespace-nowrap">${channel}</td>
+          <td class="px-4 py-3 ns-cell align-top">${recipients}</td>
+          <td class="px-4 py-3 ns-cell align-top whitespace-nowrap">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200 border border-indigo-200/70 dark:border-indigo-400/40">${escapeHtml(interval)}</span>
+          </td>
+          <td class="px-4 py-3 ns-cell align-top">${conditionBadge}</td>
+          <td class="px-4 py-3 ns-cell align-top whitespace-nowrap">
+            <span class="text-sm text-gray-700 dark:text-gray-200">${lastSent}</span>
+          </td>
+          <td class="px-4 py-3 ns-cell align-top">${status}</td>
+          ${canEdit ? `
+            <td class="px-4 py-3 ns-cell align-top text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button type="button" data-role="edit-rule" data-rule-id="${escapeHtml(rule.id)}" class="ns-action inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20 transition">
+                  <i class="fas fa-pen"></i> Bearbeiten
+                </button>
+                <button type="button" data-role="delete-rule" data-rule-id="${escapeHtml(rule.id)}" class="ns-action inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20 transition">
+                  <i class="fas fa-trash"></i> Löschen
+                </button>
+              </div>
+            </td>
+          ` : ''}
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+      <div class="ns-table-wrap overflow-x-auto">
+        <table class="ns-table min-w-full text-sm">
+          <colgroup>
+            <col style="width:3%">
+            <col style="width:25%">
+            <col style="width:10%">
+            <col style="width:17%">
+            <col style="width:7%">
+            <col style="width:13%">
+            <col style="width:11%">
+            <col style="width:8%">
+            ${canEdit ? '<col style="width:9%">' : ''}
+          </colgroup>
+          <thead class="ns-thead-sticky bg-white/70 dark:bg-gray-900/60 backdrop-blur divide-y divide-gray-200 dark:divide-gray-700">
+            <tr class="divide-x divide-gray-200/70 dark:divide-gray-700/70">
+              <th class="px-4 py-3 text-center text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300">
+                ${canEdit ? `<input type="checkbox" id="select-all-rules" class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">` : ''}
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300 uppercase">Benachrichtigung</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300 uppercase">Kanal</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300 uppercase">Käufer</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300 uppercase">Frequenz</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300 uppercase">Zustand</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300 uppercase">Letzter Beitrag</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300 uppercase">Status</th>
+              ${canEdit ? '<th class="px-4 py-3 text-right text-xs font-semibold tracking-wider text-gray-600 dark:text-gray-300 uppercase">Transaktionen</th>' : ''}
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-gray-900">
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+    console.log('renderRulesTable returning HTML with', html.indexOf('rule-checkbox') > -1 ? 'checkboxes found' : 'NO CHECKBOXES');
+    return html;
+  }
+
+  /* >>> MOBİL LİSTE RENDER <<< */
+  function renderRulesMobile(rules) {
+    console.log('renderRulesMobile called with', rules.length, 'rules');
+    if (!Array.isArray(rules) || rules.length === 0) {
+      return renderRulesEmpty();
+    }
+
+    const canEdit = window.canEditModule && window.canEditModule('notification_settings');
+
+    const cards = rules.map((rule) => {
+      const name = escapeHtml(rule.name || 'Anonyme Benachrichtigung');
+      const channel = renderChannelBadge(rule.channel);
+      const recipients = Array.isArray(rule.recipients) ? rule.recipients.map(r => escapeHtml(r)).join(', ') : '-';
+      const interval = ruleIntervalLabel(rule);
+      const cond = pickCondition(rule?.conditions);
+      const conditionText = describeCondition(cond);
+      const lastSent = escapeHtml(formatDateTime(rule.last_sent_at));
+      const status = renderStatusBadge(rule.is_active);
+      const targetText = rule.target_id != null ? `Ziel #${rule.target_id}` : 'Alle Ziel';
+
+      return `
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="flex-1">
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">${name}</h4>
+              <p class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(targetText)}</p>
+            </div>
+            ${status}
+          </div>
+
+          <div class="space-y-2 mb-3">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500 dark:text-gray-400">Kanal:</span>
+              <span>${channel}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500 dark:text-gray-400">Käufer:</span>
+              <span class="text-gray-700 dark:text-gray-200 truncate ml-2">${recipients}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500 dark:text-gray-400">Frequenz:</span>
+              <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200 font-medium">${escapeHtml(interval)}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500 dark:text-gray-400">Zustand:</span>
+              <span class="text-gray-700 dark:text-gray-200">${conditionText}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-gray-500 dark:text-gray-400">Letzter Beitrag:</span>
+              <span class="text-gray-700 dark:text-gray-200">${lastSent}</span>
+            </div>
+          </div>
+
+          ${canEdit ? `
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <button type="button" data-role="edit-rule" data-rule-id="${rule.id}" class="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                Bearbeiten
+              </button>
+              <button type="button" data-role="delete-rule" data-rule-id="${rule.id}" class="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Löschen
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    return `<div class="space-y-3">${cards}</div>`;
+  }
+
+  // --- Modal helpers (unchanged) ---
+  function openCreateModal(){
+    const m = document.getElementById('create-modal'); m.classList.remove('hidden'); m.classList.add('flex');
+    try {
+      const fld = document.getElementById('rule-cond-field');
+      const rtOp = document.getElementById('rule-cond-operator');
+      const rtVal = document.getElementById('rule-cond-value');
+      if (fld) {
+        const v = fld.value;
+        const enableRT = (v === 'response_time_ms');
+        if (rtOp) rtOp.disabled = !enableRT;
+        if (rtVal) rtVal.disabled = !enableRT;
+      }
+    } catch {}
+    // Şablon listesini kanala göre filtrele
+    loadNotificationTemplatesForSelects();
+  }
+  function closeCreateModal(){ const m = document.getElementById('create-modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+  function openTestModal(){ const m = document.getElementById('test-email-modal'); m.classList.remove('hidden'); m.classList.add('flex'); }
+  function closeTestModal(){ const m = document.getElementById('test-email-modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+  function openEditModal(rule){
+    document.getElementById('edit-rule-id').value = rule?.id ?? '';
+    document.getElementById('edit-rule-name').value = rule?.name ?? '';
+    document.getElementById('edit-rule-type').value = rule?.entity_type ?? 'target';
+    document.getElementById('edit-rule-channel').value = rule?.channel ?? 'email';
+    const _ruleConds = Array.isArray(rule?.conditions) ? rule.conditions : [];
+    const _ruleIsBackoff = _ruleConds.some(c => c && String(c.field || '').toLowerCase() === 'schedule_mode' && String(c.value || '').toLowerCase() === 'backoff');
+    document.getElementById('edit-rule-interval').value = _ruleIsBackoff ? 'backoff' : String(rule?.schedule_interval_minutes ?? 10);
+    const _editBackoffInfo = document.getElementById('edit-backoff-info');
+    if (_editBackoffInfo) _editBackoffInfo.classList.toggle('hidden', !_ruleIsBackoff);
+    document.getElementById('edit-rule-recipients').value = Array.isArray(rule?.recipients) ? rule.recipients.join(', ') : (rule?.recipients || '');
+    const all = !!rule?.all_targets;
+    const chk = document.getElementById('edit-rule-all-targets');
+    const sel = document.getElementById('edit-rule-target-select');
+    chk.checked = all; sel.disabled = all;
+    if (all) sel.classList.add('bg-gray-100','dark:bg-gray-700/60','text-gray-500','dark:text-gray-300');
+    else sel.classList.remove('bg-gray-100','dark:bg-gray-700/60','text-gray-500','dark:text-gray-300');
+    if (rule?.target_id) sel.value = rule.target_id;
+
+    const tSel = document.getElementById('edit-rule-template');
+    if (tSel && rule?.template_id != null) tSel.value = String(rule.template_id);
+
+    try {
+      const fieldSel = document.getElementById('edit-rule-cond-field');
+      const rtOp = document.getElementById('edit-rule-cond-operator');
+      const rtVal = document.getElementById('edit-rule-cond-value');
+      const rtWrap = document.getElementById('edit-cond-rt-wrap');
+      const conds = rule && rule.conditions ? (Array.isArray(rule.conditions) ? rule.conditions : []) : [];
+      if (conds.length > 0) {
+        const c = conds[0] || {};
+        const field = (c.field || '').toLowerCase();
+        if (field === 'response_time_ms' || field === 'rtt_ms') {
+          if (fieldSel) fieldSel.value = 'response_time_ms';
+          if (rtWrap) rtWrap.classList.remove('hidden');
+          if (rtOp) { rtOp.disabled = false; rtOp.value = c.operator || '<'; }
+          if (rtVal) { rtVal.disabled = false; rtVal.value = c.value || ''; }
+        } else {
+          if (fieldSel) fieldSel.value = 'status';
+          if (rtWrap) rtWrap.classList.add('hidden');
+          if (rtOp) rtOp.disabled = true;
+          if (rtVal) { rtVal.disabled = true; rtVal.value = ''; }
+        }
+      } else {
+        if (fieldSel) fieldSel.value = 'status';
+        if (rtWrap) rtWrap.classList.add('hidden');
+        if (rtOp) rtOp.disabled = true;
+        if (rtVal) { rtVal.disabled = true; rtVal.value = ''; }
+      }
+    } catch {}
+
+    const m = document.getElementById('edit-modal'); m.classList.remove('hidden'); m.classList.add('flex');
+
+    // Şablon listesini kanala göre filtrele
+    loadNotificationTemplatesForSelects();
+  }
+  function closeEditModal(){ const m = document.getElementById('edit-modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+  function openDeleteModal(ruleId){
+    document.getElementById('delete-rule-id').value = ruleId || '';
+    const m = document.getElementById('delete-modal'); m.classList.remove('hidden'); m.classList.add('flex');
+  }
+  function closeDeleteModal(){ const m = document.getElementById('delete-modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+
+  function openBulkDeleteModal(){
+    const selectedCheckboxes = document.querySelectorAll('.rule-checkbox:checked');
+    const count = selectedCheckboxes.length;
+
+    if (count === 0) return;
+
+    document.getElementById('bulk-delete-count').textContent = count;
+    const m = document.getElementById('bulk-delete-modal');
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+  }
+
+  function closeBulkDeleteModal(){
+    const m = document.getElementById('bulk-delete-modal');
+    m.classList.add('hidden');
+    m.classList.remove('flex');
+  }
+
+  async function confirmBulkDelete(){
+    const selectedCheckboxes = document.querySelectorAll('.rule-checkbox:checked');
+    const ids = Array.from(selectedCheckboxes).map(cb => cb.dataset.ruleId).filter(Boolean);
+
+    if (ids.length === 0) {
+      closeBulkDeleteModal();
+      return;
+    }
+
+    try {
+      const results = await Promise.all(
+        ids.map(id =>
+          fetch(`/api/new-notifications/rules/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+          }).then(r => r.json())
+        )
+      );
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+
+      if (failCount > 0) {
+        document.getElementById('settings-message').textContent =
+          `${successCount} Benachrichtigungen gelöscht, ${failCount} Benachrichtigungen konnten nicht gelöscht werden.`;
+      } else {
+        document.getElementById('settings-message').textContent =
+          `${successCount} Benachrichtigungen erfolgreich gelöscht`;
+      }
+
+      closeBulkDeleteModal();
+      if (window.refreshRules) window.refreshRules();
+    } catch (err) {
+      document.getElementById('settings-message').textContent = 'Fehler beim Massenlöschen: ' + err.message;
+      closeBulkDeleteModal();
+    }
+  }
+
+  function submitCreate(){
+    const name = (document.getElementById('rule-name').value || '').trim();
+    const entityType = document.getElementById('rule-type')?.value || 'target';
+    const channel = document.getElementById('rule-channel').value;
+    const intervalRaw = document.getElementById('rule-interval').value;
+    const isBackoff = intervalRaw === 'backoff';
+    const interval = isBackoff ? 10 : (parseInt(intervalRaw, 10) || 10);
+    const templateVal = document.getElementById('rule-template').value;
+    const recipientsStr = document.getElementById('rule-recipients').value;
+    const recipients = recipientsStr.split(',').map(s => s.trim()).filter(Boolean);
+
+    const allTargets = document.getElementById('rule-all-targets').checked;
+    const targetId = document.getElementById('rule-target-select').value || null;
+
+    if (!name || recipients.length === 0){
+      document.getElementById('settings-message').textContent = 'Bitte tragen Sie Namen und Empfänger ein.';
+      return;
+    }
+    // Intelligentes (abnehmendes) Intervall: nur Zielüberwachung + Status-Bedingung + einzelnes Ziel
+    const condFieldVal = document.getElementById('rule-cond-field')?.value;
+    if (isBackoff) {
+      if (entityType !== 'target') { document.getElementById('settings-message').textContent = 'Intelligentes Intervall ist nur für Zielüberwachungs-Benachrichtigungen verfügbar.'; return; }
+      if (condFieldVal && condFieldVal !== 'status') { document.getElementById('settings-message').textContent = 'Intelligentes Intervall ist nur mit der Status-Bedingung (online/offline) nutzbar.'; return; }
+      if (allTargets) { document.getElementById('settings-message').textContent = '"Alle Ziele" wird mit intelligentem Intervall nicht unterstützt — wählen Sie ein einzelnes Ziel.'; return; }
+    }
+    const conditions = (function(){
+      const field = condFieldVal;
+      if (!field) return [];
+      if (field === 'status') {
+        return [];
+      }
+      if (field === 'response_time_ms') {
+        const op = document.getElementById('rule-cond-operator')?.value || '<';
+        const val = parseInt(document.getElementById('rule-cond-value')?.value || 'NaN', 10);
+        if (!isNaN(val)) return [{ field: 'response_time_ms', operator: op, value: val }];
+      }
+      return [];
+    })();
+    if (isBackoff) conditions.push({ field: 'schedule_mode', operator: '=', value: 'backoff' });
+
+    // ÇOK ÖNEMLİ: Seçili hedefleri topla (çoklu seçim varsa)
+    const selectedTargetCheckboxes = document.querySelectorAll('#rule-target-list input[type="checkbox"]:checked');
+    const selectedTargetIds = Array.from(selectedTargetCheckboxes).map(cb => parseInt(cb.value));
+
+    // Eğer 2+ hedef seçiliyse BULK NOTIFICATION oluştur
+    if (selectedTargetIds.length > 1) {
+      if (isBackoff) {
+        document.getElementById('settings-message').textContent = 'Intelligentes Intervall ist derzeit nur für Regeln mit einem Ziel verfügbar. Erstellen Sie pro Ziel eine eigene Regel.';
+        return;
+      }
+      createBulkNotification(name, channel, recipients, selectedTargetIds);
+      return;
+    }
+
+    // Tek hedef veya "tüm hedefler" için normal rule oluştur
+    const payload = {
+      name,
+      entity_type: entityType,
+      channel,
+      schedule_interval_minutes: interval,
+      recipients,
+      template_id: templateVal ? Number(templateVal) : null,
+      conditions,
+      is_active: true,
+      all_targets: allTargets,
+      target_id: allTargets ? null : (targetId || selectedTargetIds[0] || null)
+    };
+    console.log('🔍 submitCreate payload:', JSON.stringify(payload, null, 2));
+    console.log('🔍 conditions array:', conditions);
+    fetch('/api/new-notifications/rules', {
+      method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload)
+    }).then(r => r.json()).then(d => {
+      document.getElementById('settings-message').textContent = d.success ? 'Benachrichtigung erstellt' : (d.error || 'Es ist ein Fehler aufgetreten');
+      if (d.success) { closeCreateModal(); if (window.refreshRules) window.refreshRules(); }
+    }).catch(err => { document.getElementById('settings-message').textContent = 'Fehler: ' + err.message; });
+  }
+
+  // Yeni fonksiyon: Bulk notification oluştur
+  async function createBulkNotification(name, channel, recipients, targetIds) {
+    try {
+      document.getElementById('settings-message').textContent = `Erstellung einer Massenbenachrichtigung für ${targetIds.length} Ziele...`;
+
+      // Her hedef için bilgi al
+      const targetPromises = targetIds.map(id =>
+        fetch(`/api/targets/${id}`, { headers: getAuthHeaders() }).then(r => r.json())
+      );
+      const targetsData = await Promise.all(targetPromises);
+
+      // Bulk recipients yapısını oluştur
+      const bulkTargets = targetsData.map((target, idx) => ({
+        id: targetIds[idx],
+        name: target.name || 'Unbekannt',
+        address: target.address || 'N/A',
+        status: target.status || 'Unknown',
+        status_class: getStatusClass(target.status || 'unknown'),
+        uptime_percent: target.uptime_percent || null,
+        response_time: target.response_time || null
+      }));
+
+      // Bulk notification payload
+      const notificationPayload = {
+        type: 'target_status_change',
+        channel: channel,
+        priority: 'high',
+        title: `Massenbenachrichtigung - ${name} (${targetIds.length} Ziele)`,
+        message: `Massenbenachrichtigung für ${targetIds.length} Ziele`,
+        recipients: recipients,
+        target_ids: targetIds,
+        targets: bulkTargets
+      };
+
+      // Notification gönder
+      const response = await fetch('/api/new-notifications/send', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(notificationPayload)
+      });
+
+      const result = await response.json();
+
+      if (result.success || response.ok) {
+        document.getElementById('settings-message').textContent = `✅ Massenbenachrichtigung erfolgreich erstellt (${targetIds.length} Ziele)`;
+        closeCreateModal();
+        if (window.refreshRules) window.refreshRules();
+      } else {
+        document.getElementById('settings-message').textContent = 'Fehler: ' + (result.error || 'unbekannter Fehler');
+      }
+    } catch (err) {
+      document.getElementById('settings-message').textContent = 'Fehler bei Massenbenachrichtigung: ' + err.message;
+    }
+  }
+
+  // Helper fonksiyon: Status'a göre CSS class
+  function getStatusClass(status) {
+    const lower = (status || '').toLowerCase();
+    if (lower === 'online' || lower === 'success' || lower === 'çevrimiçi') return 'online';
+    if (lower === 'offline' || lower === 'failed' || lower === 'çevrimdışı') return 'offline';
+    if (lower === 'warning' || lower === 'uyarı') return 'warning';
+    return 'unknown';
+  }
+
+  function submitEdit(){
+    const id = document.getElementById('edit-rule-id').value;
+    const name = (document.getElementById('edit-rule-name').value || '').trim();
+    const entityType = document.getElementById('edit-rule-type').value;
+    const channel = document.getElementById('edit-rule-channel').value;
+    const editIntervalRaw = document.getElementById('edit-rule-interval').value;
+    const isBackoff = editIntervalRaw === 'backoff';
+    const interval = isBackoff ? 10 : (parseInt(editIntervalRaw, 10) || 10);
+    const templateVal = document.getElementById('edit-rule-template').value;
+    const recipientsStr = document.getElementById('edit-rule-recipients').value;
+    const recipients = recipientsStr.split(',').map(s => s.trim()).filter(Boolean);
+    const allTargets = document.getElementById('edit-rule-all-targets').checked;
+    const targetId = document.getElementById('edit-rule-target-select').value || null;
+
+    if (!id) return;
+    if (!name || recipients.length === 0){
+      document.getElementById('settings-message').textContent = 'Bitte tragen Sie Namen und Empfänger ein.';
+      return;
+    }
+    const editCondField = document.getElementById('edit-rule-cond-field')?.value;
+    if (isBackoff) {
+      if (entityType !== 'target') { document.getElementById('settings-message').textContent = 'Intelligentes Intervall ist nur für Zielüberwachungs-Benachrichtigungen verfügbar.'; return; }
+      if (editCondField && editCondField !== 'status') { document.getElementById('settings-message').textContent = 'Intelligentes Intervall ist nur mit der Status-Bedingung (online/offline) nutzbar.'; return; }
+      if (allTargets) { document.getElementById('settings-message').textContent = '"Alle Ziele" wird mit intelligentem Intervall nicht unterstützt — wählen Sie ein einzelnes Ziel.'; return; }
+    }
+    const conditions = (function(){
+      const field = editCondField;
+      if (!field) return [];
+      if (field === 'status') {
+        return [];
+      }
+      if (field === 'response_time_ms') {
+        const op = document.getElementById('edit-rule-cond-operator')?.value || '<';
+        const val = parseInt(document.getElementById('edit-rule-cond-value')?.value || 'NaN', 10);
+        if (!isNaN(val)) return [{ field: 'response_time_ms', operator: op, value: val }];
+      }
+      return [];
+    })();
+    if (isBackoff) conditions.push({ field: 'schedule_mode', operator: '=', value: 'backoff' });
+
+    const payload = {
+      name,
+      entity_type: entityType,
+      channel,
+      schedule_interval_minutes: interval,
+      recipients,
+      template_id: templateVal ? Number(templateVal) : null,
+      conditions,
+      all_targets: allTargets,
+      target_id: allTargets ? null : (targetId || null)
+    };
+    fetch(`/api/new-notifications/rules/${id}`, {
+      method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(payload)
+    }).then(r => r.json()).then(d => {
+      document.getElementById('settings-message').textContent = d.success ? 'Benachrichtigung aktualisiert' : (d.error || 'Es ist ein Fehler aufgetreten');
+      if (d.success) { closeEditModal(); if (window.refreshRules) window.refreshRules(); }
+    }).catch(err => { document.getElementById('settings-message').textContent = 'Fehler: ' + err.message; });
+  }
+
+  function confirmDelete(){
+    const id = document.getElementById('delete-rule-id').value;
+    if (!id) return;
+    fetch(`/api/new-notifications/rules/${id}`, {
+      method: 'DELETE', headers: getAuthHeaders()
+    }).then(r => r.json()).then(d => {
+      document.getElementById('settings-message').textContent = d.success ? 'Benachrichtigung gelöscht' : (d.error || 'Konnte nicht gelöscht werden');
+      closeDeleteModal();
+      if (d.success && window.refreshRules) window.refreshRules();
+    }).catch(err => {
+      document.getElementById('settings-message').textContent = 'Fehler: ' + err.message;
+    });
+  }
+
+  // init + bindings (unchanged)
+  window.initNotificationSettingsPage = function() {
+    console.log('=== initNotificationSettingsPage called from notification_settings.html ===');
+    console.log('Loading settings...');
+    loadSettings();
+
+    const saveBtn = document.getElementById('btn-save-settings'); if (saveBtn) saveBtn.onclick = saveSettings;
+    const testOpenBtn = document.getElementById('btn-test-email-open'); if (testOpenBtn) testOpenBtn.onclick = openTestModal;
+    const createOpenBtn = document.getElementById('btn-open-create'); if (createOpenBtn) createOpenBtn.onclick = openCreateModal;
+    const createCloseBtn = document.getElementById('btn-close-create'); if (createCloseBtn) createCloseBtn.onclick = closeCreateModal;
+    const createCancelBtn = document.getElementById('btn-cancel-create'); if (createCancelBtn) createCancelBtn.onclick = closeCreateModal;
+    const createSubmitBtn = document.getElementById('btn-submit-create'); if (createSubmitBtn) createSubmitBtn.onclick = submitCreate;
+
+    // Intelligentes (abnehmendes) Intervall: Infobox bei Auswahl anzeigen
+    const intervalSel = document.getElementById('rule-interval');
+    if (intervalSel) intervalSel.onchange = () => {
+      const info = document.getElementById('backoff-info');
+      if (info) info.classList.toggle('hidden', intervalSel.value !== 'backoff');
+    };
+    const editIntervalSel = document.getElementById('edit-rule-interval');
+    if (editIntervalSel) editIntervalSel.onchange = () => {
+      const info = document.getElementById('edit-backoff-info');
+      if (info) info.classList.toggle('hidden', editIntervalSel.value !== 'backoff');
+    };
+
+    // "Test senden" Buttons (Erstellen + Bearbeiten)
+    const testCreateBtn = document.getElementById('btn-test-create-recipients');
+    if (testCreateBtn) testCreateBtn.onclick = () => runNotificationTest({ channelSelId: 'rule-channel', recipientsInputId: 'rule-recipients', resultElId: 'test-rule-result', button: testCreateBtn });
+    const testEditBtn = document.getElementById('btn-test-edit-recipients');
+    if (testEditBtn) testEditBtn.onclick = () => runNotificationTest({ channelSelId: 'edit-rule-channel', recipientsInputId: 'edit-rule-recipients', resultElId: 'test-edit-result', button: testEditBtn });
+
+    const tmpl = document.getElementById('lnk-templates');
+    if (tmpl) tmpl.onclick = (e) => { e.preventDefault(); if (window.app) window.app.navigateTo('new-notification-templates'); };
+
+    const testCloseBtn = document.getElementById('btn-close-test-email'); if (testCloseBtn) testCloseBtn.onclick = closeTestModal;
+    const testCancelBtn = document.getElementById('btn-cancel-test-email'); if (testCancelBtn) testCancelBtn.onclick = closeTestModal;
+    const testSendBtn = document.getElementById('btn-test-email-send');
+
+    const editCloseBtn = document.getElementById('btn-close-edit'); if (editCloseBtn) editCloseBtn.onclick = closeEditModal;
+    const editCancelBtn = document.getElementById('btn-cancel-edit'); if (editCancelBtn) editCancelBtn.onclick = closeEditModal;
+    const editSubmitBtn = document.getElementById('btn-submit-edit'); if (editSubmitBtn) editSubmitBtn.onclick = submitEdit;
+    const editDeleteBtn = document.getElementById('btn-delete-from-edit'); if (editDeleteBtn) editDeleteBtn.onclick = () => openDeleteModal(document.getElementById('edit-rule-id').value);
+
+    const delCancel = document.getElementById('btn-cancel-delete'); if (delCancel) delCancel.onclick = closeDeleteModal;
+    const delConfirm = document.getElementById('btn-confirm-delete'); if (delConfirm) delConfirm.onclick = confirmDelete;
+
+    const bulkDeleteBtn = document.getElementById('btn-bulk-delete');
+    if (bulkDeleteBtn) bulkDeleteBtn.onclick = openBulkDeleteModal;
+
+    const bulkDelCancel = document.getElementById('btn-cancel-bulk-delete');
+    if (bulkDelCancel) bulkDelCancel.onclick = closeBulkDeleteModal;
+
+    const bulkDelConfirm = document.getElementById('btn-confirm-bulk-delete');
+    if (bulkDelConfirm) bulkDelConfirm.onclick = confirmBulkDelete;
+
+    loadNotificationTemplatesForSelects();
+
+    const rulesListEl = document.getElementById('rules-list');
+    const rulesListMobileEl = document.getElementById('rules-list-mobile');
+    const refreshRulesBtn = document.getElementById('btn-refresh-rules');
+    let rulesCache = {};
+
+    function setRulesList(content) {
+      if (rulesListEl) {
+        rulesListEl.innerHTML = content;
+      }
+    }
+
+    function setRulesListMobile(content) {
+      console.log('setRulesListMobile called, element:', rulesListMobileEl);
+      if (rulesListMobileEl) {
+        console.log('Setting mobile list HTML, content length:', content.length);
+        rulesListMobileEl.innerHTML = content;
+      } else {
+        console.error('rulesListMobileEl not found!');
+      }
+    }
+
+    function updateBulkDeleteButton() {
+      const checkboxes = document.querySelectorAll('.rule-checkbox:checked');
+      const bulkDeleteBtn = document.getElementById('btn-bulk-delete');
+      const bulkDeleteText = document.getElementById('bulk-delete-text');
+      if (bulkDeleteBtn) {
+        if (checkboxes.length > 0) {
+          bulkDeleteBtn.classList.remove('hidden');
+          bulkDeleteBtn.classList.add('inline-flex');
+          if (bulkDeleteText) {
+            bulkDeleteText.textContent = `Massenlöschung (${checkboxes.length})`;
+          }
+        } else {
+          bulkDeleteBtn.classList.add('hidden');
+          bulkDeleteBtn.classList.remove('inline-flex');
+        }
+      }
+    }
+
+    function attachRuleActionHandlers() {
+      const attachToElement = (element) => {
+        if (!element) return;
+        element.querySelectorAll('[data-role="edit-rule"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = Number(btn.dataset.ruleId);
+            if (Number.isNaN(id)) return;
+            const rule = rulesCache[id];
+            if (rule) {
+              openEditModal(JSON.parse(JSON.stringify(rule)));
+            }
+          });
+        });
+        element.querySelectorAll('[data-role="delete-rule"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = Number(btn.dataset.ruleId);
+            if (!Number.isNaN(id)) {
+              openDeleteModal(id);
+            }
+          });
+        });
+      };
+
+      // Hem desktop hem mobil için event handler'ları ekle
+      attachToElement(rulesListEl);
+      attachToElement(rulesListMobileEl);
+
+      // Desktop checkbox işlemleri (sadece desktop için)
+      if (rulesListEl) {
+        // Checkbox event listeners
+        const selectAllCheckbox = document.getElementById('select-all-rules');
+        const ruleCheckboxes = document.querySelectorAll('.rule-checkbox');
+
+        if (selectAllCheckbox) {
+          selectAllCheckbox.addEventListener('change', function() {
+            ruleCheckboxes.forEach(cb => {
+              cb.checked = this.checked;
+            });
+            updateBulkDeleteButton();
+          });
+        }
+
+        ruleCheckboxes.forEach(cb => {
+          cb.addEventListener('change', () => {
+            const allChecked = Array.from(ruleCheckboxes).every(checkbox => checkbox.checked);
+            const someChecked = Array.from(ruleCheckboxes).some(checkbox => checkbox.checked);
+
+            if (selectAllCheckbox) {
+              selectAllCheckbox.checked = allChecked;
+              selectAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+
+            updateBulkDeleteButton();
+          });
+        });
+      }
+    }
+
+    function applyNotificationEditPermissions() {
+      const canEdit = window.canEditModule && window.canEditModule('notification_settings');
+
+      // Eğer düzenleme yoksa, üstteki butonları da gizle (ek güvenlik)
+      if (!canEdit) {
+        const createBtn = document.getElementById('btn-open-create');
+        const bulkDeleteBtn = document.getElementById('btn-bulk-delete');
+        if (createBtn) createBtn.style.display = 'none';
+        if (bulkDeleteBtn) bulkDeleteBtn.style.display = 'none';
+      }
+
+      const table = document.querySelector('.ns-table');
+      if (!table) return;
+      const thead = table.tHead;
+      const tbody = table.tBodies[0];
+      if (!thead || !tbody) return;
+
+      // Son sütun "Aktionen" ise onu bul
+      const headerRow = thead.rows[0];
+      const lastIndex = headerRow.cells.length - 1;
+      if (lastIndex < 0) return;
+
+      if (!canEdit) {
+        // Başlıktaki "Aktionen" hücresini gizle
+        if (headerRow.cells[lastIndex]) {
+          headerRow.cells[lastIndex].style.display = 'none';
+        }
+        // Tüm satırlarda son hücreyi gizle
+        Array.from(tbody.rows).forEach((row) => {
+          const cell = row.cells[lastIndex];
+          if (cell) {
+            cell.style.display = 'none';
+          }
+        });
+      }
+    }
+  function enforceNotificationEditPermissions() {
+    const canEdit = window.canEditModule && window.canEditModule('notification_settings');
+    if (canEdit) {
+      return;
+    }
+
+    // Üstteki butonları da elle gizleyelim (ek güvenlik)
+    const createBtn = document.getElementById('btn-open-create');
+    const bulkDeleteBtn = document.getElementById('btn-bulk-delete');
+    if (createBtn) createBtn.style.display = 'none';
+    if (bulkDeleteBtn) bulkDeleteBtn.style.display = 'none';
+
+    const table = document.querySelector('.ns-table');
+    if (!table || !table.tHead || !table.tBodies[0]) return;
+
+    const thead = table.tHead;
+    const tbody = table.tBodies[0];
+
+    // Başlık satırında "Aktionen" yazan sütunun index'ini bul
+    const headerRow = thead.rows[0];
+    let actionsIndex = -1;
+    Array.from(headerRow.cells).forEach((cell, idx) => {
+      const text = (cell.textContent || '').trim();
+      if (text === 'Transaktionen') {
+        actionsIndex = idx;
+      }
+    });
+    if (actionsIndex === -1) {
+      return;
+    }
+
+    // Başlıktaki "Aktionen" hücresini gizle
+    const headerCell = headerRow.cells[actionsIndex];
+    if (headerCell) {
+      headerCell.style.display = 'none';
+    }
+
+    // Tüm satırlarda aynı indexteki hücreyi gizle
+    Array.from(tbody.rows).forEach((row) => {
+      const cell = row.cells[actionsIndex];
+      if (cell) {
+        cell.style.display = 'none';
+      }
+    });
+
+    // Her ihtimale karşı, tablodaki tüm Düzenle/Sil butonlarını da görünmez yap
+    table.querySelectorAll('[data-role="edit-rule"], [data-role="delete-rule"]').forEach((btn) => {
+      btn.style.display = 'none';
+    });
+  }
+
+    window.refreshRules = async function(showMessage) {
+      console.log('refreshRules called');
+      if (!rulesListEl && !rulesListMobileEl) {
+        console.error('No rules list elements found!');
+        return;
+      }
+      setRulesList(renderRulesLoading());
+      setRulesListMobile(renderRulesLoading());
+      try {
+        console.log('Fetching rules from /api/new-notifications/rules');
+        const res = await fetch('/api/new-notifications/rules', { headers: getAuthHeaders() });
+        console.log('Response status:', res.status);
+        const data = await res.json().catch(() => ({}));
+        console.log('Response data:', data);
+        if (!res.ok || data.success === false) {
+          throw new Error(data.error || 'Registrierte Benachrichtigungen können nicht empfangen werden.');
+        }
+        const rules = Array.isArray(data.data) ? data.data : [];
+        rulesCache = {};
+        rules.forEach((rule) => {
+          rulesCache[rule.id] = JSON.parse(JSON.stringify(rule));
+        });
+
+        // Desktop tablo
+        setRulesList(rules.length ? renderRulesTable(rules) : renderRulesEmpty());
+        // Mobil liste
+        setRulesListMobile(rules.length ? renderRulesMobile(rules) : renderRulesEmpty());
+
+        enforceNotificationEditPermissions();
+        attachRuleActionHandlers();
+        if (showMessage) {
+          document.getElementById('settings-message').textContent = 'Gespeicherte Benachrichtigungen wurden aktualisiert.';
+        }
+      } catch (err) {
+        const errorContent = renderRulesError(err.message || 'unbekannter Fehler');
+        setRulesList(errorContent);
+        setRulesListMobile(errorContent);
+        document.getElementById('settings-message').textContent = 'Regelliste konnte nicht abgerufen werden: ' + (err && err.message ? err.message : '');
+      }
+    };
+
+    if (refreshRulesBtn) {
+      refreshRulesBtn.addEventListener('click', () => window.refreshRules(true));
+    }
+
+    const allTargets = document.getElementById('rule-all-targets');
+    const targetSelect = document.getElementById('rule-target-select');
+    if (allTargets && targetSelect) {
+      allTargets.addEventListener('change', function() {
+        targetSelect.disabled = this.checked;
+        targetSelect.classList.toggle('bg-gray-100', this.checked);
+        targetSelect.classList.toggle('dark:bg-gray-700/60', this.checked);
+        targetSelect.classList.toggle('text-gray-500', this.checked);
+        targetSelect.classList.toggle('dark:text-gray-300', this.checked);
+      });
+    }
+
+    const editAllTargets = document.getElementById('edit-rule-all-targets');
+    const editTargetSelect = document.getElementById('edit-rule-target-select');
+    if (editAllTargets && editTargetSelect) {
+      editAllTargets.addEventListener('change', function() {
+        editTargetSelect.disabled = this.checked;
+        editTargetSelect.classList.toggle('bg-gray-100', this.checked);
+        editTargetSelect.classList.toggle('dark:bg-gray-700/60', this.checked);
+        editTargetSelect.classList.toggle('text-gray-500', this.checked);
+        editTargetSelect.classList.toggle('dark:text-gray-300', this.checked);
+      });
+    }
+
+    const condField = document.getElementById('rule-cond-field');
+    if (condField) {
+      const rtWrap = document.getElementById('cond-rt-wrap');
+      const rtOp = document.getElementById('rule-cond-operator');
+      const rtVal = document.getElementById('rule-cond-value');
+      const sync = () => {
+        const v = condField.value;
+        if (v === 'response_time_ms') {
+          rtWrap?.classList?.remove('hidden');
+        }
+        else {
+          rtWrap?.classList?.add('hidden');
+        }
+        const enableRT = (v === 'response_time_ms');
+        if (rtOp) rtOp.disabled = !enableRT;
+        if (rtVal) rtVal.disabled = !enableRT;
+      };
+      condField.addEventListener('change', sync); sync();
+    }
+
+    const editCondField = document.getElementById('edit-rule-cond-field');
+    if (editCondField) {
+      const rtWrap = document.getElementById('edit-cond-rt-wrap');
+      const rtOp = document.getElementById('edit-rule-cond-operator');
+      const rtVal = document.getElementById('edit-rule-cond-value');
+      const sync = () => {
+        const v = editCondField.value;
+        if (v === 'response_time_ms') {
+          rtWrap?.classList?.remove('hidden');
+        }
+        else {
+          rtWrap?.classList?.add('hidden');
+        }
+        const enableRT = (v === 'response_time_ms');
+        if (rtOp) rtOp.disabled = !enableRT;
+        if (rtVal) rtVal.disabled = !enableRT;
+      };
+      editCondField.addEventListener('change', sync);
+    }
+
+    // Kanal değiştiğinde şablon listesini güncelle
+    const ruleChannelSelect = document.getElementById('rule-channel');
+    if (ruleChannelSelect) {
+      ruleChannelSelect.addEventListener('change', loadNotificationTemplatesForSelects);
+    }
+
+    const editRuleChannelSelect = document.getElementById('edit-rule-channel');
+    if (editRuleChannelSelect) {
+      editRuleChannelSelect.addEventListener('change', loadNotificationTemplatesForSelects);
+    }
+
+    console.log('About to call window.refreshRules()...');
+    window.refreshRules();
+    console.log('=== initNotificationSettingsPage completed ===');
+  };
+
+  function loadNotificationTemplatesForSelects() {
+    fetch('/api/new-notifications/templates', { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          ['rule-template', 'edit-rule-template'].forEach((selId) => {
+            const sel = document.getElementById(selId);
+            if (!sel) return;
+            const current = sel.value;
+
+            // Kanal seçimini bul (create veya edit modal'dan)
+            const channelSelectId = selId === 'rule-template' ? 'rule-channel' : 'edit-rule-channel';
+            const channelSelect = document.getElementById(channelSelectId);
+            const selectedChannel = channelSelect ? channelSelect.value : 'email';
+
+            // Eski dinamik option'ları temizle
+            Array.from(sel.querySelectorAll('option[data-dynamic="1"]')).forEach((opt) => opt.remove());
+
+            // Şablonları filtrele: seçilen kanal veya 'all' kanalına sahip şablonları göster
+            const filteredTemplates = d.data.filter((t) => {
+              return t.channel === selectedChannel || t.channel === 'all';
+            });
+
+            filteredTemplates.forEach((t) => {
+              const opt = document.createElement('option');
+              opt.value = t.id;
+              opt.dataset.dynamic = '1';
+              opt.dataset.channel = t.channel; // Kanal bilgisini data attribute olarak sakla
+              const channelLabel = t.channel === 'all' ? 'Alle Kanäle' : t.channel;
+              opt.textContent = `${t.name} (${channelLabel})`;
+              sel.appendChild(opt);
+            });
+
+            if (current) {
+              sel.value = current;
+            }
+          });
+        }
+      })
+      .catch(() => {});
+  }
+
+  const TEMPLATE_PLACEHOLDER_FALLBACK = [
+    { key: 'target_name', label: 'Zielname', description: 'Zielname', example: 'Hauptbüro-Router' },
+    { key: 'target_address', label: 'Zieladresse', description: 'Ping/HTTP Adresse', example: '10.0.0.5' },
+    { key: 'status', label: 'Status', description: 'Erfolg oder Misserfolg', example: 'Misserfolg' },
+    { key: 'status_text', label: 'Statusbeschreibung', description: 'Für Menschen lesbarer Statustext', example: 'Gerät offline' },
+    { key: 'timestamp', label: 'Zeit', description: 'Lieferzeit', example: '2025-11-27 14:00:00' },
+    { key: 'monitoring_type', label: 'Tracking-Typ', description: 'Ping/Http Informationen', example: 'ping' },
+    { key: 'recipients', label: 'Käufer', description: 'Durch Kommas getrennte Empfängerliste', example: 'support@example.com' },
+    { key: 'rule_name', label: 'Regelname', description: 'Regelname', example: 'Router Offline' }
+  ];
+  let templateCache = [];
+  let templatePlaceholders = TEMPLATE_PLACEHOLDER_FALLBACK.slice();
+  let editingTemplateId = null;
+  let activeTemplateInput = null;
+  let canEditTemplates = true;
+
+  function initTemplateManager() {
+    canEditTemplates = window.canEditModule && window.canEditModule('notification_settings');
+    const createBtn = document.getElementById('btn-open-template-modal');
+    if (createBtn) {
+      if (canEditTemplates) {
+        createBtn.onclick = () => openTemplateModal();
+      } else {
+        createBtn.style.display = 'none';
+      }
+    }
+    const refreshBtn = document.getElementById('btn-refresh-templates');
+    if (refreshBtn) {
+      refreshBtn.onclick = () => refreshTemplateList(true);
+    }
+    const closeBtn = document.getElementById('btn-close-template-modal');
+    if (closeBtn) closeBtn.onclick = closeTemplateModal;
+    const cancelBtn = document.getElementById('btn-cancel-template-modal');
+    if (cancelBtn) cancelBtn.onclick = closeTemplateModal;
+    const saveBtn = document.getElementById('btn-save-template');
+    if (saveBtn) {
+      saveBtn.onclick = () => {
+        if (!canEditTemplates) return;
+        saveTemplate();
+      };
+    }
+    ['template-subject', 'template-body'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('focus', () => { activeTemplateInput = el; });
+      }
+    });
+    loadTemplatePlaceholders().finally(renderTemplatePlaceholderList);
+    refreshTemplateList();
+  }
+
+  async function loadTemplatePlaceholders() {
+    try {
+      const res = await fetch('/api/new-notifications/templates/placeholders', { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || 'Die Vorlagenvariablen konnten nicht abgerufen werden.');
+      }
+      templatePlaceholders = Array.isArray(data.data) ? data.data : TEMPLATE_PLACEHOLDER_FALLBACK.slice();
+    } catch (err) {
+      console.error('Placeholder fetch failed:', err);
+      templatePlaceholders = TEMPLATE_PLACEHOLDER_FALLBACK.slice();
+    }
+  }
+
+  function renderTemplatePlaceholderList() {
+    const container = document.getElementById('template-placeholder-list');
+    if (!container) return;
+    if (!templatePlaceholders.length) {
+      container.innerHTML = '<span class=\"text-xs text-gray-500 dark:text-gray-400\">Variable nicht gefunden</span>';
+      return;
+    }
+    container.innerHTML = templatePlaceholders.map((ph) => `
+      <button type=\"button\" class=\"px-3 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 transition\" data-placeholder=\"${ph.key}\" title=\"${escapeHtml(ph.description || ph.label || ph.key)}\">
+        {${ph.key}}
+      </button>
+    `).join('');
+    container.querySelectorAll('button[data-placeholder]').forEach((btn) => {
+      btn.addEventListener('click', () => insertPlaceholderToken(btn.dataset.placeholder));
+    });
+  }
+
+  function insertPlaceholderToken(key) {
+    if (!key) return;
+    const el = activeTemplateInput || document.getElementById('template-body');
+    if (!el) return;
+    const insertion = `{${key}}`;
+    const start = el.selectionStart || 0;
+    const end = el.selectionEnd || 0;
+    const value = el.value || '';
+    el.value = value.slice(0, start) + insertion + value.slice(end);
+    const pos = start + insertion.length;
+    el.focus();
+    if (typeof el.selectionStart === 'number') {
+      el.selectionStart = pos;
+      el.selectionEnd = pos;
+    }
+  }
+
+  async function refreshTemplateList(showMessage) {
+    const listEl = document.getElementById('template-list');
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class=\"col-span-full\">
+          <div class=\"rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-dashed border-gray-200 dark:border-gray-700 px-6 py-8 text-center space-y-2\">
+            <i class=\"fas fa-layer-group text-2xl text-gray-400 dark:text-gray-500\"></i>
+            <p class=\"text-sm text-gray-500 dark:text-gray-400\">Vorlagen werden geladen...</p>
+          </div>
+        </div>`;
+    }
+    try {
+      const res = await fetch('/api/new-notifications/templates', { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || 'Vorlagenliste konnte nicht abgerufen werden');
+      }
+      templateCache = Array.isArray(data.data) ? data.data : [];
+      renderTemplateCards(templateCache);
+      populateTemplateSelects();
+      if (showMessage) {
+        document.getElementById('settings-message').textContent = 'Vorlagenliste aktualisiert.';
+      }
+    } catch (err) {
+      console.error('Template fetch err:', err);
+      if (listEl) {
+        listEl.innerHTML = `
+          <div class=\"col-span-full\">
+            <div class=\"rounded-xl border border-red-200 dark:border-red-500/40 bg-red-50 dark:bg-red-500/10 px-6 py-5 text-sm text-red-600 dark:text-red-300\">
+              Vorlagenliste konnte nicht abgerufen werden: ${escapeHtml(err.message || 'unbekannter Fehler')}
+            </div>
+          </div>`;
+      }
+      document.getElementById('settings-message').textContent = 'Vorlagenliste konnte nicht abgerufen werden: ' + (err && err.message ? err.message : '');
+    }
+  }
+
+  function populateTemplateSelects() {
+    ['rule-template', 'edit-rule-template'].forEach((selectId) => {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+      const current = sel.value;
+      Array.from(sel.querySelectorAll('option[data-dynamic="1"]')).forEach((opt) => opt.remove());
+      templateCache.forEach((tpl) => {
+        const opt = document.createElement('option');
+        opt.value = tpl.id;
+        opt.dataset.dynamic = '1';
+        opt.textContent = `${tpl.name} (${tpl.channel})`;
+        sel.appendChild(opt);
+      });
+      if (current) {
+        sel.value = current;
+      }
+    });
+  }
+
+  function renderTemplateCards(items) {
+    const listEl = document.getElementById('template-list');
+    if (!listEl) return;
+    if (!items.length) {
+      listEl.innerHTML = `
+        <div class=\"col-span-full\">
+          <div class=\"rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-6 py-8 text-center space-y-2\">
+            <i class=\"fas fa-layer-group text-2xl text-gray-400 dark:text-gray-500\"></i>
+            <p class=\"text-sm text-gray-500 dark:text-gray-400\">Noch keine Vorlage erstellt.</p>
+          </div>
+        </div>`;
+      return;
+    }
+    listEl.innerHTML = items.map((tpl) => {
+      const subject = tpl.subject ? escapeHtml(tpl.subject) : 'Es wird das Standardthema verwendet.';
+      const preview = escapeHtml((tpl.body || '').slice(0, 220));
+      const badge = tpl.channel === 'telegram'
+        ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200'
+        : 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200';
+      const statusBadge = tpl.is_active
+        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200'
+        : 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-200';
+      const placeholders = (tpl.variables || []).slice(0, 4).map((key) => `<span class=\"px-2 py-0.5 text-[11px] rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200\">{${key}}</span>`).join('');
+      const actions = canEditTemplates ? `
+        <button class=\"inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700\" data-role=\"edit-template\" data-template-id=\"${tpl.id}\">
+          <i class=\"fas fa-pen\"></i> Bearbeiten
+        </button>
+        <button class=\"inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700\" data-role=\"delete-template\" data-template-id=\"${tpl.id}\">
+          <i class=\"fas fa-trash\"></i> Löschen
+        </button>` : '';
+      return `
+        <div class=\"border border-gray-200 dark:border-gray-700 rounded-2xl p-5 bg-white dark:bg-gray-900 flex flex-col gap-4\">
+          <div class=\"flex items-center justify-between gap-3\">
+            <div>
+              <p class=\"text-sm font-semibold text-gray-900 dark:text-gray-100\">${escapeHtml(tpl.name)}</p>
+              <span class=\"inline-flex items-center gap-2 px-2.5 py-0.5 mt-1 text-[11px] font-medium rounded-full border ${badge}\">
+                <i class=\"fas ${tpl.channel === 'telegram' ? 'fa-paper-plane' : 'fa-envelope'}\"></i>
+                ${tpl.channel}
+              </span>
+            </div>
+            <span class=\"px-2.5 py-0.5 text-[11px] font-semibold rounded-full ${statusBadge}\">
+              ${tpl.is_active ? 'Aktiv' : 'Passiv'}
+            </span>
+          </div>
+          <div class=\"text-xs text-gray-500 dark:text-gray-400\">
+            <span class=\"font-semibold text-gray-700 dark:text-gray-200\">Thema:</span> ${subject}
+          </div>
+          <pre class=\"text-xs bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg p-3 text-gray-700 dark:text-gray-200 whitespace-pre-wrap\">${preview}</pre>
+          <div class=\"flex flex-wrap gap-2\">${placeholders || '<span class=\"text-[11px] text-gray-400\">Keine Variablenliste</span>'}</div>
+          <div class=\"flex items-center justify-end gap-2\">${actions}</div>
+        </div>`;
+    }).join('');
+    if (canEditTemplates) {
+      listEl.querySelectorAll('[data-role=\"edit-template\"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = Number(btn.dataset.templateId);
+          if (!Number.isNaN(id)) {
+            const tpl = templateCache.find((item) => item.id === id);
+            if (tpl) openTemplateModal(tpl);
+          }
+        });
+      });
+      listEl.querySelectorAll('[data-role=\"delete-template\"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = Number(btn.dataset.templateId);
+          if (!Number.isNaN(id)) {
+            deleteTemplate(id);
+          }
+        });
+      });
+    }
+  }
+
+  function openTemplateModal(template) {
+    if (!canEditTemplates) return;
+    editingTemplateId = template ? template.id : null;
+    const modal = document.getElementById('template-modal');
+    if (!modal) return;
+    document.getElementById('template-modal-title').textContent = template ? 'Vorlage bearbeiten' : 'Vorlage erstellen';
+    document.getElementById('template-name').value = template ? (template.name || '') : '';
+    document.getElementById('template-channel').value = template ? template.channel : 'email';
+    document.getElementById('template-default').checked = template ? !!template.is_default : false;
+    document.getElementById('template-active').checked = template ? !!template.is_active : true;
+    document.getElementById('template-subject').value = template && template.subject ? template.subject : '';
+    document.getElementById('template-body').value = template ? (template.body || '') : '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeTemplateModal() {
+    const modal = document.getElementById('template-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+    editingTemplateId = null;
+  }
+
+  async function saveTemplate() {
+    const name = (document.getElementById('template-name').value || '').trim();
+    const channel = document.getElementById('template-channel').value || 'email';
+    const subject = (document.getElementById('template-subject').value || '').trim();
+    const body = (document.getElementById('template-body').value || '').trim();
+    const isDefault = document.getElementById('template-default').checked;
+    const isActive = document.getElementById('template-active').checked;
+    if (!name || !body) {
+      document.getElementById('settings-message').textContent = 'Bitte füllen Sie das Feld für Vorlagennamen und Inhalt aus.';
+      return;
+    }
+    const payload = {
+      name,
+      type: 'target',
+      channel,
+      subject: subject || null,
+      body,
+      variables: templatePlaceholders.map((ph) => ph.key),
+      is_default: isDefault,
+      is_active: isActive
+    };
+    const method = editingTemplateId ? 'PUT' : 'POST';
+    const url = editingTemplateId ? `/api/new-notifications/templates/${editingTemplateId}` : '/api/new-notifications/templates';
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || 'Vorlage konnte nicht gespeichert werden');
+      }
+      document.getElementById('settings-message').textContent = editingTemplateId ? 'Vorlage aktualisiert.' : 'Vorlage erstellt.';
+      closeTemplateModal();
+      refreshTemplateList();
+    } catch (err) {
+      document.getElementById('settings-message').textContent = 'Vorlage konnte nicht gespeichert werden: ' + (err && err.message ? err.message : '');
+    }
+  }
+
+  async function deleteTemplate(templateId) {
+    if (!canEditTemplates) return;
+    if (!window.confirm('Möchten Sie die Vorlage wirklich löschen?')) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/new-notifications/templates/${templateId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || 'Vorlage konnte nicht gelöscht werden');
+      }
+      document.getElementById('settings-message').textContent = 'Vorlage gelöscht.';
+      refreshTemplateList();
+    } catch (err) {
+      document.getElementById('settings-message').textContent = 'Vorlage konnte nicht gelöscht werden: ' + (err && err.message ? err.message : '');
+    }
+  }
+
+  // Event listener: Koşul alanı değiştiğinde operatör ve değer input'larını enable/disable et
+  document.addEventListener('DOMContentLoaded', function() {
+    // Create modal için event listener
+    const createCondField = document.getElementById('rule-cond-field');
+    const createCondOp = document.getElementById('rule-cond-operator');
+    const createCondVal = document.getElementById('rule-cond-value');
+
+    if (createCondField) {
+      createCondField.addEventListener('change', function() {
+        const isRT = this.value === 'response_time_ms';
+        if (createCondOp) createCondOp.disabled = !isRT;
+        if (createCondVal) createCondVal.disabled = !isRT;
+
+        // RT seçiliyse default değerleri set et
+        if (isRT) {
+          if (createCondOp && !createCondOp.value) createCondOp.value = '<';
+          if (createCondVal && !createCondVal.value) createCondVal.value = '100';
+        }
+      });
+    }
+
+    // Edit modal için event listener
+    const editCondField = document.getElementById('edit-rule-cond-field');
+    const editCondOp = document.getElementById('edit-rule-cond-operator');
+    const editCondVal = document.getElementById('edit-rule-cond-value');
+
+    if (editCondField) {
+      editCondField.addEventListener('change', function() {
+        const isRT = this.value === 'response_time_ms';
+        if (editCondOp) editCondOp.disabled = !isRT;
+        if (editCondVal) editCondVal.disabled = !isRT;
+
+        // RT seçiliyse default değerleri set et
+        if (isRT) {
+          if (editCondOp && !editCondOp.value) editCondOp.value = '<';
+          if (editCondVal && !editCondVal.value) editCondVal.value = '100';
+        }
+      });
+    }
+  });
+</script>

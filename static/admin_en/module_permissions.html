@@ -1,0 +1,109 @@
+﻿<div id="module-permissions-view"
+     x-data="modulePermissionsPage()"
+     x-init="init()"
+     x-cloak
+     class="space-y-8">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm px-6 py-5">
+        <div class="space-y-2">
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Module Permissions</h1>
+            <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+                As an administrator, control user access and editing permissions to SysTrack modules. Select users and update their viewing and editing permissions.
+            </p>
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-medium rounded-full">
+                <i class="fas fa-shield-alt"></i>
+                Only admin users can access this page.
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">User</label>
+                <select x-model="selectedUserId"
+                        @change="loadUserPermissions(selectedUserId)"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                    <option value="">Select user</option>
+                    <template x-for="user in users" :key="user.id">
+                        <option :value="user.id" x-text="`${user.email} (${getRoleText(user.role)})`"></option>
+                    </template>
+                </select>
+            </div>
+        </div>
+
+        <!-- Admin Warning -->
+        <div x-show="selectedUserId && selectedUserRole === 'admin'"
+             x-transition
+             class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-blue-900 dark:text-blue-200">Admin User</p>
+                <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">Admin users have full access to all modules and their permissions cannot be changed.</p>
+            </div>
+        </div>
+
+        <div x-show="selectedUserId" x-transition class="space-y-4">
+            <template x-for="module in availableModules" :key="module.name">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 border border-gray-200 dark:border-gray-600 rounded-xl"
+                     :class="isModuleLocked(module.name) ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100" x-text="module.display_name"></h3>
+                            <span x-show="isModuleLocked(module.name)"
+                                  class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                Locked
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1" x-text="module.description"></p>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <label class="inline-flex items-center gap-2 text-sm"
+                               :class="isModuleLocked(module.name) || isCheckboxDisabled(module.name, 'view') ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' : 'text-gray-700 dark:text-gray-300'">
+                            <input type="checkbox"
+                                   :id="'view-' + module.name"
+                                   :checked="getModulePermission(module.name, 'view')"
+                                   :disabled="isCheckboxDisabled(module.name, 'view')"
+                                   @change="updateModulePermission(module.name, 'view', $event.target.checked)"
+                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed">
+                            View
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm"
+                               :class="isModuleLocked(module.name) || isCheckboxDisabled(module.name, 'edit') ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' : 'text-gray-700 dark:text-gray-300'">
+                            <input type="checkbox"
+                                   :id="'edit-' + module.name"
+                                   :checked="getModulePermission(module.name, 'edit')"
+                                   :disabled="isCheckboxDisabled(module.name, 'edit')"
+                                   @change="updateModulePermission(module.name, 'edit', $event.target.checked)"
+                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed">
+                            Edit
+                        </label>
+                    </div>
+                </div>
+            </template>
+
+            <div class="flex justify-end">
+                <button @click="savePermissions()"
+                        :disabled="!selectedUserId || loading"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <svg x-show="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9H9m11 11v-5h-.581m-15.356-2a8.003 8.003 0 0015.356 2H15"></path>
+                    </svg>
+                    <span x-show="!loading">Save Permissions</span>
+                    <span x-show="loading">Saving...</span>
+                </button>
+            </div>
+        </div>
+
+        <div x-show="!selectedUserId" class="flex items-center justify-center p-8 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-500 dark:text-gray-400">
+            Select a user to edit permissions.
+        </div>
+    </div>
+</div>

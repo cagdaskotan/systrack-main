@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Giriş - SysTrack</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Alpine.js CDN -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/admin/css/custom.css" />
+  <link rel="icon" type="image/png" href="/static/admin/images/logo.png" />
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "Segoe UI", "Roboto", "Helvetica", "Arial"] },
+          colors: {
+            primary: {
+              50: "#eff6ff",
+              100: "#dbeafe",
+              200: "#bfdbfe",
+              300: "#93c5fd",
+              400: "#60a5fa",
+              500: "#3b82f6",
+              600: "#2563eb",
+              700: "#1d4ed8",
+              800: "#1e40af",
+              900: "#1e3a8a",
+            },
+          },
+          boxShadow: {
+            soft: "0 14px 55px rgba(0,0,0,.42)",
+            glow: "0 0 0 1px rgba(59,130,246,.20), 0 18px 65px rgba(37,99,235,.18)",
+          },
+        },
+      },
+    };
+  </script>
+
+<style>
+  :root{
+    --g1: rgba(37,99,235,.23);
+    --g2: rgba(34,211,238,.12);
+    --g3: rgba(99,102,241,.14);
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce){
+    * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+    .blob, .film, .scanline, .sparkle, .logo-frame::before { display:none !important; }
+  }
+
+  .grid-mask {
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(148,163,184,.12) 1px, transparent 0),
+      radial-gradient(circle at 1px 1px, rgba(37,99,235,.10) 1px, transparent 0);
+    background-size: 26px 26px, 52px 52px;
+    background-position: 0 0, 13px 13px;
+    mask-image: radial-gradient(ellipse at center, black 45%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 45%, transparent 78%);
+  }
+
+  .film{
+    background:
+      radial-gradient(1200px 650px at 12% 12%, var(--g1), transparent 58%),
+      radial-gradient(900px 520px at 88% 28%, var(--g2), transparent 62%),
+      radial-gradient(1050px 720px at 40% 92%, var(--g3), transparent 62%);
+    opacity: .80;
+    animation: drift 16s ease-in-out infinite;
+    transform: translateZ(0);
+  }
+  @keyframes drift{
+    0%,100%{ transform: translate3d(0,0,0); }
+    50%{ transform: translate3d(-14px,10px,0); }
+  }
+
+  .blob{
+    filter: blur(40px);
+    opacity: .55;
+    transform: translateZ(0);
+    animation: floaty 12s ease-in-out infinite;
+  }
+  .b2{ animation-duration: 14s; }
+  .b3{ animation-duration: 16s; }
+  @keyframes floaty{
+    0%,100%{ transform: translate3d(0,0,0) scale(1); }
+    50%{ transform: translate3d(12px,-16px,0) scale(1.06); }
+  }
+
+  .scanline{
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,.05), transparent);
+    height: 260px;
+    width: 120%;
+    transform: rotate(8deg);
+    animation: scan 8s linear infinite;
+    opacity: .20;
+  }
+  @keyframes scan{
+    0%{ transform: translateY(-280px) rotate(8deg); }
+    100%{ transform: translateY(100vh) rotate(8deg); }
+  }
+
+  /* --- Premium card glow with two layers --- */
+  .card-glow{
+    position: relative;
+    isolation: isolate;
+    --gx: 50%;
+    --gy: 18%;
+    --hx: 16%;
+    --hy: 118%;
+  }
+  .card-glow::before{
+    content:"";
+    position:absolute;
+    inset:-1px;
+    border-radius: 26px;
+    background:
+      radial-gradient(900px circle at var(--gx) var(--gy), rgba(59,130,246,.22), transparent 48%),
+      radial-gradient(950px circle at var(--hx) var(--hy), rgba(34,211,238,.10), transparent 60%);
+    z-index:-1;
+    opacity:.95;
+  }
+  .card-glow::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius: 26px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 32%, rgba(255,255,255,.03));
+    pointer-events:none;
+    z-index:0;
+    opacity:.35;
+  }
+
+  .sparkle{
+    background:
+      radial-gradient(circle at 20% 35%, rgba(255,255,255,.07) 1px, transparent 2px),
+      radial-gradient(circle at 68% 22%, rgba(255,255,255,.06) 1px, transparent 2px),
+      radial-gradient(circle at 82% 55%, rgba(255,255,255,.05) 1px, transparent 2px);
+    opacity:.55;
+    animation: twinkle 6s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{ opacity:.45; transform: translateY(0); }
+    50%{ opacity:.75; transform: translateY(-2px); }
+  }
+
+  .field{ transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease; }
+  .field:focus{ box-shadow: 0 0 0 4px rgba(37,99,235,.14); }
+
+  .btn-shine::before{
+    content:"";
+    position:absolute;
+    inset:-2px;
+    background: radial-gradient(900px circle at var(--x,50%) var(--y,50%), rgba(255,255,255,.16), transparent 46%);
+    opacity:0;
+    transition: opacity .18s ease;
+  }
+  .btn-shine:hover::before{ opacity:1; }
+  .btn-shine::after{
+    content:"";
+    position:absolute;
+    top:-120%;
+    left:-30%;
+    width: 58%;
+    height: 260%;
+    transform: rotate(20deg);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent);
+    opacity: 0;
+  }
+  .btn-shine:hover::after{
+    opacity:.6;
+    animation: sweep .95s ease;
+  }
+  @keyframes sweep{
+    from{ transform: translateX(0) rotate(20deg); }
+    to{ transform: translateX(265%) rotate(20deg); }
+  }
+
+  .ripple {
+    position:absolute;
+    border-radius:999px;
+    transform: translate(-50%,-50%) scale(0);
+    background: rgba(255,255,255,.20);
+    animation: ripple .55s ease-out;
+    pointer-events:none;
+    mix-blend-mode: screen;
+  }
+  @keyframes ripple{
+    to{ transform: translate(-50%,-50%) scale(1); opacity:0; }
+  }
+
+  .shake{ animation: shake .28s ease-in-out 0s 1; }
+  @keyframes shake{
+    0%,100%{ transform: translateX(0); }
+    25%{ transform: translateX(-6px); }
+    50%{ transform: translateX(6px); }
+    75%{ transform: translateX(-3px); }
+  }
+
+    .logo-frame{
+    width: 100%;
+    max-width: 440px;
+    border-radius: 22px;
+
+    background: linear-gradient(
+        135deg,
+        rgba(59,130,246,.70),
+        rgba(34,211,238,.28),
+        rgba(99,102,241,.38),
+        rgba(59,130,246,.55)
+    );
+
+    padding: 1px;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,.06),
+        0 16px 55px rgba(0,0,0,.35);
+
+    overflow: hidden;
+    }
+
+    .logo-inner{
+    border-radius: 21px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow:
+        inset 0 0 0 1px rgba(15,23,42,.08);
+
+    padding: 8px 20px;
+    }
+
+
+    @media (min-width: 640px){
+    .logo-inner{ padding: 16px 26px; }
+    }
+
+    .logo-img-wrap{
+    height: 48px;
+    width: 100%;
+    max-width: 360px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    overflow:hidden;
+    }
+
+    @media (min-width: 640px){
+    .logo-img-wrap{ height: 54px; }
+    }
+
+    .systrack-logo{
+    height: 100%;
+    width: auto;
+    display: block;
+
+    clip-path: inset(31% 5.7% 31% 5.7%);
+
+    transform: scale(1.28);
+    transform-origin: center;
+
+    filter: drop-shadow(0 1px 0 rgba(0,0,0,.08));
+    }
+
+    @media (min-width: 640px){
+    .systrack-logo{ transform: scale(1.33); }
+    }
+    
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear {
+    display: none;
+    }
+
+    input[type="password"]::-webkit-textfield-decoration-container {
+    display: none;
+    }
+</style>
+
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 antialiased font-sans" x-data="loginPage()">
+  <!-- Background -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-950 to-black"></div>
+    <div class="absolute inset-0 film"></div>
+    <div class="absolute inset-0 grid-mask"></div>
+
+    <div class="blob absolute -top-28 -left-28 h-96 w-96 rounded-full bg-primary-700/35"></div>
+    <div class="blob b2 absolute top-1/3 -right-28 h-[26rem] w-[26rem] rounded-full bg-cyan-500/18"></div>
+    <div class="blob b3 absolute -bottom-32 left-1/4 h-[28rem] w-[28rem] rounded-full bg-indigo-500/18"></div>
+
+    <div class="scanline absolute left-[-10%] top-0"></div>
+    <div class="absolute inset-0 bg-gradient-to-tr from-black/45 via-transparent to-black/40"></div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div
+    id="loading-overlay"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-md"
+    :class="isLoading ? 'flex' : 'hidden'">
+    <div class="w-[min(440px,92vw)] rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-soft"
+         style="animation: pop .18s ease-out;">
+      <style>
+        @keyframes pop{ from{ transform: translateY(8px) scale(.985); opacity:0 } to{ transform: translateY(0) scale(1); opacity:1 } }
+      </style>
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <div class="h-11 w-11 rounded-2xl border border-white/10 bg-white/5"></div>
+          <div class="absolute inset-0 animate-spin rounded-2xl border-2 border-white/10 border-t-primary-500"></div>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-slate-100">Giriş yapılıyor</p>
+          <p class="text-xs text-slate-400">Kimlik doğrulama ve oturum açma…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-root" class="fixed right-4 top-4 z-40 space-y-2"></div>
+
+  <!-- Main -->
+  <div class="relative min-h-full flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <div class="w-full max-w-md">
+
+    <div class="mb-7 text-center logo-wrap">
+    <div class="mx-auto inline-flex flex-col items-center justify-center gap-3">
+        <div class="logo-frame">
+        <div class="logo-inner">
+            <div class="logo-img-wrap">
+            <img
+                src="/static/admin/images/systrackbyz.png"
+                alt="SYSTRACK by Z"
+                class="systrack-logo select-none"
+                draggable="false"
+            />
+            </div>
+        </div>
+        </div>
+
+        <p class="text-sm text-slate-400">
+        İzleme paneline erişmek için oturum açın.
+        </p>
+    </div>
+    </div>
+
+
+      <!-- Card -->
+      <div id="login-card" class="card-glow rounded-[26px] border border-white/10 bg-slate-900/55 backdrop-blur-xl shadow-soft">
+        <div class="sparkle absolute inset-0 rounded-[26px] pointer-events-none"></div>
+
+        <div class="p-7 sm:p-8 relative z-[1]">
+          <!-- Form (login() bozulmaz) -->
+          <form id="login-form" @submit.prevent="login()" class="space-y-5">
+            <!-- Email -->
+            <div>
+              <label for="email" class="mb-2 block text-sm font-medium text-slate-200">E-Posta / Kullanıcı Adı</label>
+              <div class="relative">
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="m6 8 6 4 6-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <input
+                  id="email"
+                  name="email"
+                  type="text"
+                  required
+                  x-model="form.email"
+                  placeholder="E-posta veya kullanıcı adı"
+                  autocomplete="username"
+                  class="field w-full rounded-2xl border border-white/10 bg-slate-950/45 px-10 py-3 text-slate-100 placeholder:text-slate-500 outline-none
+                         focus:border-primary-500/60 focus:ring-4 focus:ring-primary-500/15"
+                />
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div>
+              <label for="password" class="mb-2 block text-sm font-medium text-slate-200">Şifre</label>
+              <div class="relative">
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M7.5 10V8.2A4.5 4.5 0 0 1 12 3.7a4.5 4.5 0 0 1 4.5 4.5V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M7.2 10h9.6A2.2 2.2 0 0 1 19 12.2v6.6A2.2 2.2 0 0 1 16.8 21H7.2A2.2 2.2 0 0 1 5 18.8v-6.6A2.2 2.2 0 0 1 7.2 10Z" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M12 14v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </span>
+
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  x-model="form.password"
+                  placeholder="Şifrenizi girin"
+                  autocomplete="current-password"
+                  class="field w-full rounded-2xl border border-white/10 bg-slate-950/45 px-10 pr-12 py-3 text-slate-100 placeholder:text-slate-500 outline-none
+                         focus:border-primary-500/60 focus:ring-4 focus:ring-primary-500/15"
+                />
+
+                <!-- show/hide -->
+                <button
+                  type="button"
+                  id="toggle-password"
+                  class="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-slate-400 hover:text-slate-200"
+                  aria-label="Şifreyi göster/gizle"
+                  title="Şifreyi göster/gizle"
+                >
+                  <svg id="eye-open" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                  <svg id="eye-closed" class="h-5 w-5 hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 5l16 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M2.5 12s3.5-7 9.5-7c2.1 0 4.05.86 5.7 2.04M21.5 12s-3.5 7-9.5 7c-2.1 0-4.05-.86-5.7-2.04" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M10.2 9.3A3.5 3.5 0 0 0 12 15.5c.53 0 1.03-.12 1.48-.33" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- caps lock hint -->
+              <div id="caps-hint" class="mt-2 hidden items-center gap-2 text-xs text-amber-200/90">
+                <span class="inline-flex h-5 w-5 items-center justify-center rounded-md border border-amber-500/25 bg-amber-500/10">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 3 4 11h16L12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M12 11v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M12 20h.01" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                Caps Lock açık görünüyor.
+              </div>
+            </div>
+
+            <!-- Remember -->
+            <div class="flex items-center justify-between">
+              <label class="inline-flex items-center gap-2 text-sm text-slate-300 select-none">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  x-model="form.remember"
+                  class="h-4 w-4 rounded border-white/20 bg-slate-950/40 text-primary-600 focus:ring-4 focus:ring-primary-500/20"
+                />
+                Beni hatırla
+              </label>
+            </div>
+
+            <!-- Submit -->
+            <button
+              id="login-btn"
+              type="submit"
+              :disabled="isLoading"
+              class="btn-shine group relative w-full overflow-hidden rounded-2xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white shadow-glow transition
+                     hover:bg-primary-500 focus:outline-none focus:ring-4 focus:ring-primary-500/25 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <span x-show="!isLoading" class="relative inline-flex items-center justify-center gap-2">
+                Giriş Yap
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="opacity-90">
+                  <path d="M4 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="m12 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+
+              <span x-show="isLoading" class="relative inline-flex items-center justify-center gap-2">
+                <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Giriş yapılıyor...
+              </span>
+            </button>
+
+            <!-- Error -->
+            <div
+              id="error-box"
+              x-show="errorMessage"
+              x-transition:enter="transition ease-out duration-150"
+              x-transition:enter-start="transform opacity-0 translate-y-1"
+              x-transition:enter-end="transform opacity-100 translate-y-0"
+              class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4"
+            >
+              <div class="flex gap-3">
+                <div class="mt-0.5 text-red-300">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 9v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M12 17h.01" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M10.29 3.86 2.82 17.23A2 2 0 0 0 4.56 20h14.88a2 2 0 0 0 1.74-2.77L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                </div>
+                <p class="text-sm text-red-200" x-text="errorMessage"></p>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="border-t border-white/10 px-7 py-5 sm:px-8 relative z-[1]">
+          <div class="flex items-center justify-center text-xs text-slate-500">
+            <span>&copy; <span id="current-year"></span> Z System</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keep existing scripts (login logic stays) -->
+  <script src="/static/admin/js/helpers.js"></script>
+  <script src="/static/admin/js/toast.js"></script>
+  <script src="/static/admin/js/login.js"></script>
+
+  <!-- Premium glow morph + micro UX (no impact on login()) -->
+  <script>
+    (function () {
+      const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      const card = document.getElementById("login-card");
+      const btn = document.getElementById("login-btn");
+      const form = document.getElementById("login-form");
+      const errorBox = document.getElementById("error-box");
+
+      const email = document.getElementById("email");
+      const pwd = document.getElementById("password");
+
+      // --- Glow morph: starts from default glow anchors and "flows" to cursor ---
+      if (card) {
+        const baseA = { x: 50, y: 18 };
+        const baseB = { x: 16, y: 118 };
+
+        let curA = { ...baseA };
+        let curB = { ...baseB };
+
+        let tgtA = { ...baseA };
+        let tgtB = { ...baseB };
+
+        let hovering = false;
+        let rafId = null;
+
+        const setVars = () => {
+          card.style.setProperty("--gx", curA.x.toFixed(2) + "%");
+          card.style.setProperty("--gy", curA.y.toFixed(2) + "%");
+          card.style.setProperty("--hx", curB.x.toFixed(2) + "%");
+          card.style.setProperty("--hy", curB.y.toFixed(2) + "%");
+        };
+
+        const lerp = (a, b, t) => a + (b - a) * t;
+
+        const tick = () => {
+          const aT = hovering ? 0.14 : 0.10;
+          const bT = hovering ? 0.08 : 0.07;
+
+          curA.x = lerp(curA.x, tgtA.x, aT);
+          curA.y = lerp(curA.y, tgtA.y, aT);
+
+          curB.x = lerp(curB.x, tgtB.x, bT);
+          curB.y = lerp(curB.y, tgtB.y, bT);
+
+          setVars();
+
+          const close = (p, q) => Math.abs(p - q) < 0.08;
+          const done =
+            !hovering &&
+            close(curA.x, tgtA.x) && close(curA.y, tgtA.y) &&
+            close(curB.x, tgtB.x) && close(curB.y, tgtB.y);
+
+          if (!done) rafId = requestAnimationFrame(tick);
+          else rafId = null;
+        };
+
+        const ensureRAF = () => {
+          if (reduceMotion) return;
+          if (rafId == null) rafId = requestAnimationFrame(tick);
+        };
+
+        const toCardPercent = (e) => {
+          const r = card.getBoundingClientRect();
+          const x = ((e.clientX - r.left) / r.width) * 100;
+          const y = ((e.clientY - r.top) / r.height) * 100;
+          return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
+        };
+
+        card.addEventListener("mouseenter", (e) => {
+          hovering = true;
+          const p = toCardPercent(e);
+          tgtA = { x: p.x, y: p.y };
+          tgtB = { x: p.x * 0.85 + 8, y: p.y * 1.05 + 10 };
+          ensureRAF();
+        });
+
+        card.addEventListener("mousemove", (e) => {
+          if (!hovering) return;
+          const p = toCardPercent(e);
+          tgtA = { x: p.x, y: p.y };
+          tgtB = { x: p.x * 0.88 + 6, y: p.y * 1.08 + 9 };
+          ensureRAF();
+        });
+
+        card.addEventListener("mouseleave", () => {
+          hovering = false;
+          tgtA = { ...baseA };
+          tgtB = { ...baseB };
+          ensureRAF();
+        });
+
+        setVars();
+      }
+
+      // Button shine follows cursor + ripple
+      if (btn) {
+        btn.addEventListener("mousemove", (e) => {
+          const r = btn.getBoundingClientRect();
+          const x = ((e.clientX - r.left) / r.width) * 100;
+          const y = ((e.clientY - r.top) / r.height) * 100;
+          btn.style.setProperty("--x", x + "%");
+          btn.style.setProperty("--y", y + "%");
+        });
+
+        btn.addEventListener("click", (e) => {
+          if (reduceMotion) return;
+          const r = btn.getBoundingClientRect();
+          const size = Math.max(r.width, r.height) * 1.2;
+          const ripple = document.createElement("span");
+          ripple.className = "ripple";
+          ripple.style.width = ripple.style.height = size + "px";
+          ripple.style.left = (e.clientX - r.left) + "px";
+          ripple.style.top = (e.clientY - r.top) + "px";
+          btn.appendChild(ripple);
+          ripple.addEventListener("animationend", () => ripple.remove());
+        });
+      }
+
+      // Error shake when content changes
+      if (errorBox && !reduceMotion) {
+        const obs = new MutationObserver(() => {
+          const visible = window.getComputedStyle(errorBox).display !== "none";
+          if (!visible) return;
+          errorBox.classList.remove("shake");
+          void errorBox.offsetWidth;
+          errorBox.classList.add("shake");
+        });
+        obs.observe(errorBox, { childList: true, subtree: true, characterData: true });
+      }
+
+      // Password show/hide
+      const toggle = document.getElementById("toggle-password");
+      const eyeOpen = document.getElementById("eye-open");
+      const eyeClosed = document.getElementById("eye-closed");
+
+      if (pwd && toggle && eyeOpen && eyeClosed) {
+        const setState = (show) => {
+          pwd.type = show ? "text" : "password";
+          eyeOpen.classList.toggle("hidden", show);
+          eyeClosed.classList.toggle("hidden", !show);
+          toggle.setAttribute("aria-pressed", show ? "true" : "false");
+        };
+        setState(false);
+
+        toggle.addEventListener("click", () => {
+          setState(pwd.type === "password");
+          pwd.focus({ preventScroll: true });
+        });
+
+        toggle.addEventListener("mousedown", () => { if (!reduceMotion) setState(true); });
+        toggle.addEventListener("mouseup", () => setState(false));
+        toggle.addEventListener("mouseleave", () => setState(false));
+        toggle.addEventListener("touchstart", () => { setState(true); }, { passive: true });
+        toggle.addEventListener("touchend", () => setState(false));
+      }
+
+      // CapsLock hint
+      const capsHint = document.getElementById("caps-hint");
+      if (pwd && capsHint) {
+        const checkCaps = (e) => {
+          const on = e.getModifierState && e.getModifierState("CapsLock");
+          capsHint.classList.toggle("hidden", !on);
+          capsHint.classList.toggle("flex", !!on);
+        };
+        pwd.addEventListener("keyup", checkCaps);
+        pwd.addEventListener("keydown", checkCaps);
+        pwd.addEventListener("blur", () => {
+          capsHint.classList.add("hidden");
+          capsHint.classList.remove("flex");
+        });
+      }
+
+      // Enter flow: email -> password
+      if (email && pwd) {
+        email.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            pwd.focus();
+          }
+        });
+      }
+
+      // Disable all fields while loading overlay visible
+      if (form) {
+        const setDisabled = (disabled) => {
+          form.querySelectorAll("input, button").forEach((el) => {
+            if (el.id === "login-btn") return;
+            el.disabled = disabled;
+          });
+        };
+        const overlay = document.getElementById("loading-overlay");
+        if (overlay) {
+          const obs = new MutationObserver(() => {
+            const isVisible = !overlay.classList.contains("hidden");
+            setDisabled(isVisible);
+          });
+          obs.observe(overlay, { attributes: true, attributeFilter: ["class"] });
+        }
+      }
+
+      const yearEl = document.getElementById("current-year");
+      if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
+      }
+    })();
+  </script>
+</body>
+</html>
+

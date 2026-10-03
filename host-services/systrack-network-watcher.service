@@ -1,0 +1,17 @@
+[Unit]
+Description=SysTrack Network Configuration Watcher
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/systrack/network-watcher.sh
+Restart=always
+RestartSec=5
+User=root
+Group=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=systrack-network-watcher
+
+[Install]
+WantedBy=multi-user.target

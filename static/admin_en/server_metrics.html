@@ -1,0 +1,418 @@
+<div class="space-y-8" x-data="serverMetricsApp()" x-init="init()" x-cloak>
+
+    <!-- Page Heading -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm px-6 py-5">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div class="space-y-1">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Server Status</h1>
+                <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+                    View CPU, RAM and Disk information for SNMP-enabled targets. Make sure the community string is configured correctly.
+                </p>
+                <p class="text-xs text-gray-400 dark:text-gray-500" x-text="lastUpdateText ? 'Last update: ' + lastUpdateText : 'Last update: -'"></p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button type="button"
+                        class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary-600 hover:bg-primary-500 transition shadow-sm"
+                        @click="openGuideModal()">
+                    <span class="fas fa-book-open mr-2"></span>
+                    Guide
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total devices</p>
+                    <h2 class="text-3xl font-semibold text-gray-900 dark:text-white" x-text="totalServers"></h2>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 flex items-center justify-center">
+                    <i class="fas fa-server"></i>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Targets with SNMP enabled or service credentials configured</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Healthy devices</p>
+                    <h2 class="text-3xl font-semibold text-emerald-600" x-text="healthyServers"></h2>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Data is read successfully</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Failed</p>
+                    <h2 class="text-3xl font-semibold text-rose-600" x-text="criticalServers"></h2>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-300 flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">SNMP error or access issue</p>
+        </div>
+    </section>
+
+    <!-- Tips -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-xl p-4 text-sm text-blue-800 dark:text-blue-200">
+            <p class="font-semibold mb-1">Community Check</p>
+            <p>Can you get a response from the device with `snmpwalk -v2c -c &lt;community&gt; &lt;ip&gt; 1.3.6.1.2.1.1.1`? If the command fails, check the community string and firewall settings on the device.</p>
+        </div>
+        <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200">
+            <p class="font-semibold mb-1">Host Resources MIB</p>
+            <p>Some devices use vendor-specific OIDs for CPU/RAM. If you cannot get any data, check whether the device supports Host-Resources MIB.</p>
+        </div>
+    </section>
+
+    <div x-show="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-700 dark:text-red-200">
+        <div class="flex items-center">
+            <span class="fas fa-circle-exclamation mr-2"></span>
+            <span x-text="error"></span>
+        </div>
+    </div>
+
+    <div x-show="loading" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <p class="mt-4 text-gray-600 dark:text-gray-300">Loading data...</p>
+    </div>
+
+    <div x-show="!loading && !metrics.length && !error" class="bg-white dark:bg-gray-800 rounded-xl shadow p-12 text-center border border-dashed border-gray-200 dark:border-gray-700">
+        <i class="fas fa-inbox text-gray-400 dark:text-gray-600 text-4xl mb-3"></i>
+        <p class="text-gray-600 dark:text-gray-300">No SNMP data yet.</p>
+    </div>
+
+    <div x-show="!loading && metrics.length" class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900/40">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Server</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">CPU Core</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">CPU</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">RAM</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Disk</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Temperature</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700" id="server-metrics-body">
+                    <template x-for="metric in metrics" :key="metric.id || metric.target_id">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="metric.target_name || 'Unknown'"></div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400" x-text="metric.target_address"></div>
+                            </td>
+                            <!-- CPU Core -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <svg class="h-4 w-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                                    </svg>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-gray-100" x-text="formatCPUCores(metric.cpu_cores)"></span>
+                                </div>
+                            </td>
+                            <!-- CPU -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors inline-flex"
+                                     :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                         ? 'bg-gray-100 dark:bg-gray-700'
+                                         : (Number(metric.cpu_percent) >= 90
+                                             ? 'bg-red-100 dark:bg-red-900'
+                                             : (Number(metric.cpu_percent) >= 70
+                                                 ? 'bg-yellow-100 dark:bg-yellow-900'
+                                                 : 'bg-green-100 dark:bg-green-900'))">
+                                    <svg class="h-4 w-4"
+                                         :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                             ? 'text-gray-400 dark:text-gray-500'
+                                             : (Number(metric.cpu_percent) >= 90
+                                                 ? 'text-red-600 dark:text-red-400'
+                                                 : (Number(metric.cpu_percent) >= 70
+                                                     ? 'text-yellow-600 dark:text-yellow-400'
+                                                     : 'text-green-600 dark:text-green-400'))"
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                                    </svg>
+                                    <div class="text-xs">
+                                        <div class="text-gray-600 dark:text-gray-400 font-medium">CPU</div>
+                                        <div class="font-bold"
+                                             :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                                 ? 'text-gray-500 dark:text-gray-400'
+                                                 : (Number(metric.cpu_percent) >= 90
+                                                     ? 'text-red-700 dark:text-red-300'
+                                                     : (Number(metric.cpu_percent) >= 70
+                                                         ? 'text-yellow-700 dark:text-yellow-300'
+                                                         : 'text-green-700 dark:text-green-300'))"
+                                             x-text="formatPercent(metric.cpu_percent)"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <!-- RAM -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors inline-flex"
+                                     :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                         ? 'bg-gray-100 dark:bg-gray-700'
+                                         : (Number(metric.ram_percent) >= 90
+                                             ? 'bg-red-100 dark:bg-red-900'
+                                             : (Number(metric.ram_percent) >= 70
+                                                 ? 'bg-yellow-100 dark:bg-yellow-900'
+                                                 : 'bg-blue-100 dark:bg-blue-900'))">
+                                    <svg class="h-4 w-4"
+                                         :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                             ? 'text-gray-400 dark:text-gray-500'
+                                             : (Number(metric.ram_percent) >= 90
+                                                 ? 'text-red-600 dark:text-red-400'
+                                                 : (Number(metric.ram_percent) >= 70
+                                                     ? 'text-yellow-600 dark:text-yellow-400'
+                                                     : 'text-blue-600 dark:text-blue-400'))"
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <div class="text-xs">
+                                        <div class="text-gray-600 dark:text-gray-400 font-medium">RAM</div>
+                                        <div class="font-bold"
+                                             :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                                 ? 'text-gray-500 dark:text-gray-400'
+                                                 : (Number(metric.ram_percent) >= 90
+                                                     ? 'text-red-700 dark:text-red-300'
+                                                     : (Number(metric.ram_percent) >= 70
+                                                         ? 'text-yellow-700 dark:text-yellow-300'
+                                                         : 'text-blue-700 dark:text-blue-300'))"
+                                             x-text="formatRAM(metric.ram_used_mb, metric.ram_total_mb)"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <!-- Disk -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors inline-flex"
+                                     :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                         ? 'bg-gray-100 dark:bg-gray-700'
+                                         : (Number(metric.disk_percent) >= 90
+                                             ? 'bg-red-100 dark:bg-red-900'
+                                             : (Number(metric.disk_percent) >= 70
+                                                 ? 'bg-yellow-100 dark:bg-yellow-900'
+                                                 : 'bg-purple-100 dark:bg-purple-900'))">
+                                    <svg class="h-4 w-4"
+                                         :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                             ? 'text-gray-400 dark:text-gray-500'
+                                             : (Number(metric.disk_percent) >= 90
+                                                 ? 'text-red-600 dark:text-red-400'
+                                                 : (Number(metric.disk_percent) >= 70
+                                                     ? 'text-yellow-600 dark:text-yellow-400'
+                                                     : 'text-purple-600 dark:text-purple-400'))"
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                                    </svg>
+                                    <div class="text-xs">
+                                        <div class="text-gray-600 dark:text-gray-400 font-medium">Disk</div>
+                                        <div class="font-bold"
+                                             :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                                 ? 'text-gray-500 dark:text-gray-400'
+                                                 : (Number(metric.disk_percent) >= 90
+                                                     ? 'text-red-700 dark:text-red-300'
+                                                     : (Number(metric.disk_percent) >= 70
+                                                         ? 'text-yellow-700 dark:text-yellow-300'
+                                                         : 'text-purple-700 dark:text-purple-300'))"
+                                             x-text="formatDisk(metric.disk_used_gb, metric.disk_total_gb)"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <!-- Temperature -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors inline-flex"
+                                     :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                         ? 'bg-gray-100 dark:bg-gray-700'
+                                         : (Number(metric.temperature_c) >= 80
+                                             ? 'bg-red-100 dark:bg-red-900'
+                                             : (Number(metric.temperature_c) >= 65
+                                                 ? 'bg-yellow-100 dark:bg-yellow-900'
+                                                 : 'bg-emerald-100 dark:bg-emerald-900'))">
+                                    <i class="fa fa-thermometer-quarter"
+                                       :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                           ? 'text-gray-400 dark:text-gray-500'
+                                           : (Number(metric.temperature_c) >= 80
+                                               ? 'text-red-600 dark:text-red-400'
+                                               : (Number(metric.temperature_c) >= 65
+                                                   ? 'text-yellow-600 dark:text-yellow-400'
+                                                   : 'text-emerald-600 dark:text-emerald-400'))"></i>
+                                    <div class="text-xs">
+                                        <div class="text-gray-600 dark:text-gray-400 font-medium">Temperature</div>
+                                        <div class="font-bold"
+                                             :class="['snmp_error','unreachable','pending'].includes(metric.status)
+                                                 ? 'text-gray-500 dark:text-gray-400'
+                                                 : (Number(metric.temperature_c) >= 80
+                                                     ? 'text-red-700 dark:text-red-300'
+                                                     : (Number(metric.temperature_c) >= 65
+                                                         ? 'text-yellow-700 dark:text-yellow-300'
+                                                         : 'text-emerald-700 dark:text-emerald-300'))"
+                                             x-text="formatTemperature(metric.temperature_c)"></div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm font-semibold" :class="statusClass(metric.status)" x-text="statusLabel(metric.status)"></span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SNMP Guide Modal -->
+<div x-cloak x-show="guideModalOpen"
+     x-transition.opacity
+     class="fixed inset-0 z-50"
+     @keydown.escape.window="closeGuideModal()">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="closeGuideModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div x-show="guideModalOpen"
+             x-transition.opacity
+             class="w-full max-w-5xl max-h-[90vh] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-6 overflow-hidden flex flex-col">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-sm uppercase tracking-wide text-primary-500 font-semibold">SNMP Guide</p>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">How to enable SNMP for Server Status?</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Select your operating system below and follow the steps. The community string and SNMP version must match the SysTrack target.</p>
+            </div>
+            <button class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200" @click="closeGuideModal()">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
+            <button @click="setGuideTab('windows')"
+                    :class="guideTab === 'windows' ? 'bg-primary-600 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200'"
+                    class="py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition">
+                <i class="fab fa-windows text-lg"></i>
+                Windows
+            </button>
+            <button @click="setGuideTab('linux')"
+                    :class="guideTab === 'linux' ? 'bg-primary-600 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200'"
+                    class="py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition">
+                <i class="fab fa-linux text-lg"></i>
+                Linux
+            </button>
+            <button @click="setGuideTab('mac')"
+                    :class="guideTab === 'mac' ? 'bg-primary-600 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200'"
+                    class="py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition">
+                <i class="fab fa-apple text-lg"></i>
+                macOS
+            </button>
+        </div>
+
+        <div class="mt-6 space-y-8 text-sm text-gray-700 dark:text-gray-200 h-[600px] overflow-y-auto pr-1">
+            <div x-show="guideTab === 'windows'" x-transition.opacity>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <i class="fas fa-desktop text-primary-500"></i>
+                    Windows 10/11
+                </h3>
+                <ol class="list-decimal pl-5 space-y-4 mt-3">
+                    <li>
+                        <span class="font-semibold">Install the SNMP feature:</span>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>Add-WindowsCapability -Online -Name "SNMP.Client~~~~0.0.1.0"
+Set-Service -Name SNMP -StartupType Automatic
+Start-Service -Name SNMP</code></pre>
+                        <p class="mt-2 text-gray-500 dark:text-gray-400">Run PowerShell as Administrator.</p>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Configure the community string and access restrictions:</span>
+                        <p class="mt-2">In services.msc &gt; SNMP Service &gt; Security, add the string you will use in SysTrack to <strong>Accepted community names</strong> and allow the SysTrack IP under <strong>Accept SNMP packets from</strong>.</p>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Allow UDP 161 in Windows Firewall:</span>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>New-NetFirewallRule -DisplayName "SNMP" -Direction Inbound -Protocol UDP -LocalPort 161 -Action Allow</code></pre>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Test the connection:</span>
+                        <p class="mt-2">Make sure you get a response from <code>snmpwalk -v2c -c &lt;community&gt; localhost 1.3.6.1.2.1.1.1</code> using the same string as SysTrack.</p>
+                    </li>
+                </ol>
+            </div>
+
+            <div x-show="guideTab === 'linux'" x-transition.opacity>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <i class="fas fa-server text-primary-500"></i>
+                    Ubuntu / Debian based Linux
+                </h3>
+                <ol class="list-decimal pl-5 space-y-4 mt-3">
+                    <li>
+                        <span class="font-semibold">Install the SNMP daemon:</span>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>sudo apt update && sudo apt install snmp snmpd</code></pre>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Edit the configuration:</span>
+                        <p class="mt-2">Make sure the following lines exist in <code>/etc/snmp/snmpd.conf</code>:</p>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>agentAddress udp:161
+rocommunity &lt;community&gt; &lt;systrack_ip&gt;/32
+sysLocation "Server Room"
+sysContact admin@example.com</code></pre>
+                        <p class="mt-2 text-gray-500 dark:text-gray-400">Adjust the CIDR block if broader access is needed.</p>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Restart the service and enable it on boot:</span>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>sudo systemctl enable --now snmpd</code></pre>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Open UDP 161 on the firewall:</span>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>sudo ufw allow 161/udp</code></pre>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Test with snmpwalk:</span>
+                        <p class="mt-2"><code>snmpwalk -v2c -c &lt;community&gt; localhost 1.3.6.1.2.1.1.1</code></p>
+                    </li>
+                </ol>
+            </div>
+
+            <div x-show="guideTab === 'mac'" x-transition.opacity>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <i class="fas fa-laptop text-primary-500"></i>
+                    macOS (Homebrew + Net-SNMP)
+                </h3>
+                <ol class="list-decimal pl-5 space-y-4 mt-3">
+                    <li>
+                        <span class="font-semibold">Install the Net-SNMP package:</span>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>brew install net-snmp</code></pre>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Prepare the configuration:</span>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>sudo cp /opt/homebrew/etc/snmp/snmpd.conf.example /opt/homebrew/etc/snmp/snmpd.conf
+sudo nano /opt/homebrew/etc/snmp/snmpd.conf</code></pre>
+                        <p class="mt-2">Add <code>agentAddress udp:161</code> and <code>rocommunity &lt;community&gt; default</code> to the file.</p>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Start the service:</span>
+                        <pre class="mt-2 bg-gray-900 text-green-300 text-xs sm:text-sm rounded-lg p-3 overflow-auto"><code>brew services start net-snmp</code></pre>
+                        <p class="mt-2 text-gray-500 dark:text-gray-400">The service starts automatically after macOS restarts.</p>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Allow UDP 161 in the firewall:</span>
+                        <p class="mt-2">Allow net-snmp in System Settings &gt; Network &gt; Firewall or use `sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /opt/homebrew/sbin/snmpd`.</p>
+                    </li>
+                    <li>
+                        <span class="font-semibold">Validate with snmpwalk:</span>
+                        <p class="mt-2"><code>snmpwalk -v2c -c &lt;community&gt; localhost 1.3.6.1.2.1.1.1</code></p>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-4 text-xs sm:text-sm text-blue-900 dark:text-blue-100">
+                <p class="font-semibold mb-1 flex items-center gap-2"><i class="fas fa-lightbulb"></i>Tip</p>
+                <p>SNMP queries use UDP. If there is a router, VLAN, or firewall between the target device and SysTrack, make sure UDP/161 traffic is allowed. Community strings are case-sensitive.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!-- End of x-data="serverMetricsApp()" scope -->

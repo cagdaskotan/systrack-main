@@ -1,0 +1,106 @@
+<div class="space-y-8" id="backup-page" x-cloak>
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm px-6 py-5">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="space-y-1">
+        <!-- <div class="inline-flex items-center px-3 py-1 bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-300 text-xs font-semibold rounded-full">
+          Veri Yönetimi
+        </div> -->
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Yedekleme</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+          Hedefler ve bildirim kurallarını tek tıkla dışa aktarın veya mevcut bir JSON yedeğini geri yükleyin.
+        </p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="backup-refresh-history"
+                class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+          <i class="fas fa-sync text-xs"></i>
+          Yenile
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <section class="grid grid-cols-1 xl:grid-cols-2 gap-6" x-show="window.canEditModule && window.canEditModule('backup')">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+      <div class="flex items-start gap-4">
+        <div class="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 flex items-center justify-center">
+          <i class="fas fa-download text-lg"></i>
+        </div>
+        <div class="space-y-4 flex-1">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Yedekleme İndir</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Sistem verilerinin tamamını JSON formatında indirerek harici ortamlarda saklayın.
+            </p>
+          </div>
+          <button id="backup-export-button"
+                  class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900">
+            <i class="fas fa-file-export"></i>
+            Yedeklemeyi İndir
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+      <div class="flex items-start gap-4">
+        <div class="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
+          <i class="fas fa-upload text-lg"></i>
+        </div>
+        <div class="space-y-4 flex-1">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Yedekleme Yükle</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Daha önce indirdiğiniz JSON dosyasını sisteme tekrar aktararak verilerinizi geri yükleyin.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <input type="file" id="backup-file-input" accept=".json" class="hidden">
+            <button id="backup-file-select"
+                    class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+              <i class="fas fa-folder-open"></i>
+              Dosya Seç
+            </button>
+            <button id="backup-import-button"
+                    class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    disabled>
+              <i class="fas fa-cloud-upload-alt"></i>
+              Yedeklemeyi Yükle
+            </button>
+          </div>
+          <p id="backup-selected-file" class="text-xs text-gray-500 dark:text-gray-400 hidden"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent backups -->
+  <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+    <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Son Yedeklemeler</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Gerçekleşen indirme ve yükleme işlemleri zaman damgası ve detaylarıyla listelenir.</p>
+      </div>
+    </div>
+
+    <!-- DESKTOP TABLO (md ve üstü) -->
+    <div class="hidden md:block px-6 py-8" id="backup-history">
+      <div class="text-center text-sm text-gray-500 dark:text-gray-400 space-y-2">
+        <i class="fas fa-database text-2xl text-gray-400"></i>
+        <p>Henüz görüntülenecek bir kayıt bulunmuyor.</p>
+        <p class="text-xs">Yedekleme işlemi tamamlandığında burada kısa bir özet gözükecek.</p>
+      </div>
+    </div>
+
+    <!-- MOBİL LİSTE (md altı) -->
+    <div class="md:hidden px-4 py-6" id="backup-history-mobile">
+      <div class="text-center text-sm text-gray-500 dark:text-gray-400 space-y-2">
+        <i class="fas fa-database text-2xl text-gray-400"></i>
+        <p>Henüz görüntülenecek bir kayıt bulunmuyor.</p>
+        <p class="text-xs">Yedekleme işlemi tamamlandığında burada kısa bir özet gözükecek.</p>
+      </div>
+    </div>
+  </section>
+</div>

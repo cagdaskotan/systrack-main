@@ -1,0 +1,361 @@
+<style>
+  /* ── Thermometer ─────────────────────────────────────────────────────── */
+
+  #sensors-view .thermo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 20px;
+    margin-bottom: 32px;
+  }
+
+  #sensors-view .thermo-tube {
+    width: 14px;
+    height: 170px;
+    border-radius: 7px;
+    background: #0c1322;
+    border: 1.5px solid rgba(255,255,255,0.07);
+    position: relative;
+    z-index: 2;
+    overflow: hidden;
+    box-shadow:
+      inset 2px 0 6px rgba(0,0,0,0.7),
+      inset -1px 0 2px rgba(255,255,255,0.03),
+      inset 0 4px 12px rgba(0,0,0,0.85);
+  }
+
+  #sensors-view .thermo-tube::before,
+  #sensors-view .thermo-tube::after {
+    content: "";
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    pointer-events: none;
+  }
+  #sensors-view .thermo-tube::before { top: 25%; }
+  #sensors-view .thermo-tube::after  { top: 50%; }
+
+  #sensors-view .thermo-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-height: 0;
+    transition: height 0.6s cubic-bezier(0.34, 1.10, 0.64, 1);
+  }
+  #sensors-view .thermo-wrap[data-theme="ambient"] .thermo-fill {
+    background: linear-gradient(to top, #0c4a6e 0%, #0ea5e9 45%, #7dd3fc 100%);
+    box-shadow: 0 -8px 24px rgba(14,165,233,0.8);
+  }
+  #sensors-view .thermo-wrap[data-theme="cabinet"] .thermo-fill {
+    background: linear-gradient(to top, #7f1d1d 0%, #fb7185 40%, #fbbf24 82%, #fde68a 100%);
+    box-shadow: 0 -8px 24px rgba(251,113,133,0.75);
+  }
+
+  #sensors-view .thermo-wrap::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(6px);
+  }
+  #sensors-view .thermo-wrap[data-theme="ambient"]::after {
+    background: radial-gradient(circle, rgba(14,165,233,0.6) 0%, transparent 70%);
+  }
+  #sensors-view .thermo-wrap[data-theme="cabinet"]::after {
+    background: radial-gradient(circle, rgba(251,113,133,0.6) 0%, transparent 70%);
+  }
+
+  #sensors-view .thermo-val {
+    position: absolute;
+    left: calc(100% + 14px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15,23,42,0.92);
+    color: #e2e8f0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 7px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+    line-height: 1.3;
+    z-index: 4;
+    transition: top 0.6s cubic-bezier(0.34, 1.10, 0.64, 1);
+  }
+  #sensors-view .thermo-val::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: rgba(15,23,42,0.92);
+  }
+</style>
+
+<div id="sensors-view" class="space-y-8 max-w-full overflow-hidden">
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm px-6 py-5">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div class="space-y-1">
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Ortam İzleme</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+          Kabinet içi ortam, port ve görüntü sensörlerinden gelen verilerin anlık özetini takip edin.
+        </p>
+      </div>
+      <div class="inline-flex items-center gap-3 px-4 py-2 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        Online
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-3 items-stretch">
+    <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 lg:col-span-2 overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between mb-3 flex-shrink-0">
+        <div>
+          <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">Sıcaklık Değerleri</p>
+        </div>
+        <div class="flex gap-2 text-xs text-gray-500">
+          <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-sky-400"></span>Ortam</span>
+          <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-rose-400"></span>CPU</span>
+        </div>
+      </div>
+
+      <div class="flex-1 flex items-center overflow-hidden">
+        <div class="flex flex-col gap-6 xl:flex-row w-full">
+          <div class="flex-1 overflow-hidden px-2 pt-2 pb-1">
+            <canvas id="sensorTemperatureChart" class="block w-full h-[8rem]"></canvas>
+          </div>
+
+          <div class="flex flex-row xl:flex-col gap-6 xl:w-48 justify-between">
+            <div class="flex flex-col items-center gap-3 text-center" data-thermo data-theme="cabinet" data-value="0" data-unit="°C" data-min="-10" data-max="40">
+              <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">CPU</p>
+              <div class="thermo-wrap" data-theme="cabinet">
+                <div class="thermo-tube"><div class="thermo-fill" style="height:0%"></div></div>
+                <div class="thermo-val">—</div>
+              </div>
+            </div>
+
+            <div class="flex flex-col items-center gap-3 text-center" data-thermo data-theme="ambient" data-value="0" data-unit="°C" data-min="-10" data-max="50">
+              <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">Ortam</p>
+              <div class="thermo-wrap" data-theme="ambient">
+                <div class="thermo-tube"><div class="thermo-fill" style="height:0%"></div></div>
+                <div class="thermo-val">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="flex flex-col gap-6">
+      <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 flex-1 flex flex-col gap-3 overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">Nem Değeri</p>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center">
+          <div class="relative w-full max-w-[14.5rem] h-full min-h-[8.25rem]">
+            <canvas id="humidityGauge" class="absolute inset-0 w-full h-full" data-gauge="humidity" data-min="0" data-max="100" data-value="0" data-unit="%"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-0.5">
+              <span id="humidityValueLabel" class="text-2xl font-semibold tracking-tight text-sky-200 drop-shadow leading-none">—</span>
+              <span class="text-[11px] text-sky-300/60 font-medium leading-none">%</span>
+            </div>
+            <div class="absolute bottom-[-0.25rem] inset-x-0 flex w-full px-6 text-[11px] text-slate-400/80 justify-between pointer-events-none">
+              <span>0</span><span>100</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 flex-1 flex flex-col gap-3 overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">Hava Kalitesi</p>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center">
+          <div class="relative w-full max-w-[14.5rem] h-full min-h-[8.25rem]">
+            <canvas id="airGauge" class="absolute inset-0 w-full h-full" data-gauge="air" data-min="0" data-max="1000" data-value="0" data-unit=" AQI"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-0.5">
+              <span id="airValueLabel" class="text-2xl font-semibold tracking-tight text-amber-200 drop-shadow leading-none">—</span>
+              <span class="text-[11px] text-amber-300/60 font-medium leading-none">AQI</span>
+            </div>
+            <div class="absolute bottom-[-0.25rem] inset-x-0 flex w-full px-6 text-[11px] text-slate-400/80 justify-between pointer-events-none">
+              <span>0</span><span>1000</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 flex-1 flex flex-col gap-3 overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">Atmosfer Basıncı</p>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center">
+          <div class="relative w-full max-w-[14.5rem] h-full min-h-[8.25rem]">
+            <canvas id="pressureGauge" class="absolute inset-0 w-full h-full" data-gauge="pressure" data-min="950" data-max="1050" data-value="0" data-unit=" hPa"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-0.5">
+              <span id="pressureValueLabel" class="text-2xl font-semibold tracking-tight text-teal-200 drop-shadow leading-none">—</span>
+              <span class="text-[11px] text-teal-300/60 font-medium leading-none">hPa</span>
+            </div>
+            <div class="absolute bottom-[-0.25rem] inset-x-0 flex w-full px-6 text-[11px] text-slate-400/80 justify-between pointer-events-none">
+              <span>950</span><span>1050</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-5 items-stretch">
+    <div class="flex flex-col gap-6 lg:col-span-2">
+      <section class="bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded-2xl shadow-sm p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs uppercase text-amber-500">Sensör Uyarıları</p>
+          </div>
+        </div>
+        <div class="space-y-3 overflow-y-auto pr-2 max-h-52">
+          <article class="rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-12-01 09:36:11 | Cihaz Adı : ZSISTEM_ANA_KABIN | Belirlenen Ortam Sıcaklığı: 45 °C | Mevcut Ortam Sıcaklığı: 26 °C
+            </p>
+          </article>
+          <article class="rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-12-01 09:30:04 | Cihaz Adı : ZSISTEM_ANA_KABIN | Belirlenen Nem Değeri: %70 | Mevcut Nem Değeri: %72
+            </p>
+          </article>
+          <article class="rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-12-01 09:22:19 | Cihaz Adı : ZSISTEM_ANA_KABIN | Belirlenen CPU Sıcaklığı: 80 °C | Mevcut CPU Sıcaklığı: 85.4 °C
+            </p>
+          </article>
+          <article class="rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-12-01 09:15:45 | Cihaz Adı : ZSISTEM_ANA_KABIN | Kapı Kontağı: AÇIK | Süre: 00:05:12
+            </p>
+          </article>
+          <article class="rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-12-01 09:09:10 | Cihaz Adı : ZSISTEM_ANA_KABIN | Duman Sensörü: UYARI | Seviye: 2
+            </p>
+          </article>
+          <article class="rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-12-01 09:01:33 | Cihaz Adı : ZSISTEM_ANA_KABIN | Hava Kalitesi (AQI): 208 | Eşik: 200
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded-2xl shadow-sm p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs uppercase text-blue-500">Port Uyarıları</p>
+          </div>
+        </div>
+        <div class="space-y-3 overflow-y-auto pr-2 max-h-52">
+          <article class="rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-05-31 19:37:18 | Cihaz Adı : ZSISTEM_ANA_KABIN | ŞEBEKE ELEKTRİĞİ GERİ GELDİ
+            </p>
+          </article>
+          <article class="rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-05-31 19:16:22 | Cihaz Adı : ZSISTEM_ANA_KABIN | ŞEBEKE ELEKTRİĞİ KESİLDİ
+            </p>
+          </article>
+          <article class="rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-05-27 08:30:26 | Cihaz Adı : ZSISTEM_ANA_KABIN | Port-03 ENERJİ GERİ GELDİ
+            </p>
+          </article>
+          <article class="rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-05-27 08:12:03 | Cihaz Adı : ZSISTEM_ANA_KABIN | Port-03 ENERJİ KESİLDİ
+            </p>
+          </article>
+          <article class="rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-05-12 22:44:57 | Cihaz Adı : ZSISTEM_ANA_KABIN | UPS MODU: AKÜ | Yük: %31
+            </p>
+          </article>
+          <article class="rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/40 p-3">
+            <p class="text-xs text-gray-700 dark:text-gray-200 font-mono leading-snug">
+              2025-05-12 22:58:10 | Cihaz Adı : ZSISTEM_ANA_KABIN | UPS MODU: ŞEBEKE | Yük: %18
+            </p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <!--
+    <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 lg:col-span-1">
+      <p class="text-xs uppercase text-gray-500">Olay Günlüğü</p>
+      <div class="mt-4 space-y-5">
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <span class="text-xs text-gray-400">14:32</span>
+            <span class="w-1 h-12 bg-primary-500 rounded-full"></span>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Kabinet kapısı kapandı</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Erişim girişinin ardından sensör normal değer döndürdü.</p>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <span class="text-xs text-gray-400">14:08</span>
+            <span class="w-1 h-12 bg-emerald-500 rounded-full"></span>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Fan devri %60 olarak sabitlendi</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">PID kontrolörü kabinet içi sıcaklığın 4°C'de kalmasını sağladı.</p>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center">
+            <span class="text-xs text-gray-400">13:41</span>
+            <span class="w-1 h-12 bg-rose-500 rounded-full"></span>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Siren tetiklendi</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Port 03 enerjisi kesildiğinde 15 sn süreyle siren aktif oldu.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    -->
+
+    <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 lg:col-span-3 flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase text-gray-500">Ekran Görüntüleri</p>
+        </div>
+      </div>
+      <figure class="bg-gray-950/40 rounded-2xl overflow-hidden border border-white/5 flex flex-col flex-1 min-h-[24rem]">
+        <div class="relative flex-1 overflow-hidden">
+          <img src="/static/admin/images/sensor.jpg" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110">
+          <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/25"></div>
+          <img src="/static/admin/images/sensor.jpg" alt="Sensör Görüntüsü" class="relative w-full h-full object-contain">
+          <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.06),transparent)]"></div>
+        </div>
+        <figcaption class="flex items-center justify-between px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-white/5">
+          <p>IT Odası</p>
+          <p>HD</p>
+        </figcaption>
+      </figure>
+    </section>
+  </div>
+</div>

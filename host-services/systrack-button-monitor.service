@@ -1,0 +1,16 @@
+[Unit]
+Description=SysTrack Button Monitor - Power butonu ile ag sifirlama
+After=multi-user.target
+Documentation=https://systrack.app
+
+[Service]
+Type=simple
+ExecStart=/opt/systrack/systrack-button-monitor.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=systrack-button-monitor
+
+[Install]
+WantedBy=multi-user.target

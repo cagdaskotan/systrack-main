@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysTrack - Ağ İzleme Sistemi</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind config - must be after Tailwind CDN
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = {
+                darkMode: 'class',
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: {
+                                50: '#eff6ff',
+                                100: '#dbeafe',
+                                200: '#bfdbfe',
+                                300: '#93c5fd',
+                                400: '#60a5fa',
+                                500: '#3b82f6',
+                                600: '#2563eb',
+                                700: '#1d4ed8',
+                                800: '#1e40af',
+                                900: '#1e3a8a',
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js CDN -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Flag Icons CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css" />
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Font Awesome -->
+    <!-- Font Awesome — CDN yerine cihazdan lokal servis (offline/firewall arkasındaki müşterilerde ikonlar çalışsın) -->
+    <link rel="stylesheet" href="/static/admin/vendor/fontawesome/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/admin/css/custom.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/admin/images/logo2.png">
+
+    <style>
+    /* IP detection button pulse when unread > 0 */
+    .ip-detect-pulse{
+        position: relative;
+        animation: ipDetectGlow 1.2s ease-in-out infinite;
+    }
+    @keyframes ipDetectGlow{
+        0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,.0); }
+        50%     { box-shadow: 0 0 0 6px rgba(220,38,38,.25); }
+    }
+    [x-cloak]{ display:none !important; }
+    :root { --fancybox-zIndex: 10050; }
+    .fancybox__container { z-index: 10050 !important; }
+    #cameraLightboxModal { position: fixed !important; inset: 0 !important; width: 100vw; height: 100vh; z-index: 2147483647 !important; }
+    </style>
+
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200" x-data="app()">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center space-x-3">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <span class="text-gray-700 dark:text-gray-300">Yükleniyor...</span>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-root" class="fixed top-4 right-4 z-[9999] space-y-2"></div>
+
+    <!-- Modal Container -->
+    <div id="modal-root">
+
+    <!-- IP Detections Modal -->
+    <div
+        x-show="ipDetectionsModalOpen"
+        x-cloak
+        class="fixed inset-0 z-[999] flex items-center justify-center px-4"
+        @keydown.escape.window="closeIPDetectionsModal()"
+    >
+        <!-- Backdrop -->
+        <div
+        class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+        @click="closeIPDetectionsModal()"
+        ></div>
+
+        <!-- Modal Panel -->
+        <div
+        class="relative w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+        x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+        @click.stop
+        >
+        <!-- Header -->
+        <div class="px-5 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20">
+            <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                <div class="h-9 w-9 rounded-xl bg-primary-600/10 dark:bg-primary-400/10 flex items-center justify-center">
+                    <i class="fas fa-shield-alt text-primary-600 dark:text-primary-400"></i>
+                </div>
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                    Bilinmeyen IP Tespitleri
+                    </h3>
+                    <!-- <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    Sunucuda, kayıtlı cihazlarınız dışında tespit edilen IP adresleri.
+                    </p> -->
+                </div>
+                </div>
+
+                <div class="mt-3 text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                Bu ekran, <span class="font-semibold text-gray-900 dark:text-gray-100">IP Tarayıcı</span> ve
+                <span class="font-semibold text-gray-900 dark:text-gray-100">Hedefler</span> listesinde bulunmayan fakat
+                sunucunun ağ arayüzünde “görünmüş” cihazları size bildirir.
+                <br>
+                <!-- Amaç: <span class="font-semibold text-gray-900 dark:text-gray-100">izinsiz / beklenmeyen</span> bir cihaz bağlandıysa hızlıca fark etmeniz. -->
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="shrink-0 h-9 w-9 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
+                @click="closeIPDetectionsModal()"
+                aria-label="Kapat"
+            >
+                <svg class="h-5 w-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="px-5 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+            <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            Toplam: <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="ipAlerts.length"></span> kayıt
+            </div>
+
+            <div class="flex items-center gap-2">
+            <button
+                type="button"
+                @click="refreshIPAlerts()"
+                class="text-xs sm:text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200"
+            >
+                Yenile
+            </button>
+
+            <button
+                type="button"
+                @click="ackAllIPAlerts()"
+                class="text-xs sm:text-sm px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white"
+            >
+                Hepsini okundu say
+            </button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="px-5 sm:px-6 py-4 max-h-[60vh] overflow-y-auto">
+            <!-- Loading -->
+            <template x-if="ipAlertsLoading">
+            <div class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                <span>IP tespitleri yükleniyor...</span>
+            </div>
+            </template>
+
+            <!-- Empty -->
+            <template x-if="!ipAlertsLoading && ipAlerts.length === 0">
+            <div class="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-600 dark:text-gray-300">
+                <div class="flex items-start gap-3">
+                <div class="h-9 w-9 rounded-xl bg-green-600/10 dark:bg-green-400/10 flex items-center justify-center">
+                    <i class="fas fa-check text-green-600 dark:text-green-400"></i>
+                </div>
+                <div>
+                    <div class="font-semibold text-gray-900 dark:text-gray-100">Şimdilik sorun yok</div>
+                    <div class="mt-1">
+                    Yeni, beklenmeyen bir IP tespiti bulunmadı. Bir cihaz ağa bağlanırsa burada listelenecek.
+                    </div>
+                </div>
+                </div>
+            </div>
+            </template>
+
+            <!-- List -->
+            <template x-if="!ipAlertsLoading && ipAlerts.length > 0">
+            <div class="space-y-3">
+                <template x-for="a in ipAlerts" :key="a.id">
+                <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 overflow-hidden">
+                    <div class="p-4 flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-600/10 dark:bg-red-400/10">
+                            <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-sm"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-gray-900 dark:text-gray-100" x-text="a.ip"></div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 truncate" x-text="a.subnet"></div>
+                        </div>
+                        </div>
+
+                        <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                        <span class="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                            Tespit: <span x-text="new Date(a.detected_at).toLocaleString('tr-TR')"></span>
+                        </span>
+                        <span class="px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200">
+                            Bu IP kayıtlı cihazlarınız dışında göründü
+                        </span>
+                        </div>
+                    </div>
+
+                    <div class="shrink-0 flex items-center gap-2">
+                        <button
+                            type="button"
+                            @click="createTargetFromIPAlert(a)"
+                            x-show="!isIPInTargets(a.ip)"
+                            class="text-xs px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white"
+                            title="Bu IP'yi hedefler listesine ekle"
+                        >
+                            <i class="fas fa-plus mr-1"></i>Hedef Oluştur
+                        </button>
+                        <button
+                            type="button"
+                            @click="ackIPAlert(a.id)"
+                            class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        >
+                            Okundu
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                </template>
+            </div>
+            </template>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 flex items-center justify-between gap-3">
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+            İpucu: Bu kayıtlar “beklenmeyen cihaz” uyarısıdır. Cihazı tanımıyorsanız ağ yöneticinizle kontrol edin.
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Notifications Selection Modal -->
+    <div
+        x-show="notificationsModalOpen"
+        x-cloak
+        class="fixed inset-0 z-[999] flex items-center justify-center px-4"
+        @keydown.escape.window="closeNotificationsModal()"
+    >
+        <!-- Backdrop -->
+        <div
+            class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            @click="closeNotificationsModal()"
+        ></div>
+
+        <!-- Modal Panel -->
+        <div
+            class="relative w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+            @click.stop
+        >
+            <!-- Header -->
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-900/20">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            <i class="fas fa-bell text-blue-600 dark:text-blue-400"></i>
+                            Bildirimler
+                        </h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                            Hangi bildirimleri görüntülemek istediğinizi seçin
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="shrink-0 h-9 w-9 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
+                        @click="closeNotificationsModal()"
+                        aria-label="Kapat"
+                    >
+                        <svg class="h-5 w-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body - Two Options -->
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- IP Detections Card -->
+                    <button
+                        @click="closeNotificationsModal(); openIPDetectionsModal()"
+                        class="group relative overflow-hidden rounded-2xl border-2 border-red-200 dark:border-red-900/50 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 p-6 text-left transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:border-red-400 dark:hover:border-red-700"
+                    >
+                        <!-- Background Pattern -->
+                        <div class="absolute inset-0 opacity-5">
+                            <div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0); background-size: 32px 32px;"></div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="relative">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="p-3 bg-red-600 dark:bg-red-500 rounded-xl shadow-lg">
+                                    <i class="fas fa-network-wired text-2xl text-white"></i>
+                                </div>
+                                <span
+                                    x-show="ipAlertsUnreadCount > 0"
+                                    x-text="ipAlertsUnreadCount"
+                                    class="px-3 py-1 rounded-full bg-red-600 text-white text-sm font-bold shadow-lg"
+                                ></span>
+                            </div>
+
+                            <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                                Bilinmeyen IP Tespitleri
+                            </h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                                Ağınızda tespit edilen, kayıtlı olmayan IP adreslerini görüntüleyin
+                            </p>
+
+                            <div class="flex items-center gap-2 text-red-600 dark:text-red-400 font-medium text-sm">
+                                <span>Bildirimleri Görüntüle</span>
+                                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Service Alerts Card -->
+                    <button
+                        @click="closeNotificationsModal(); openServiceAlertsModal()"
+                        class="group relative overflow-hidden rounded-2xl border-2 border-purple-200 dark:border-purple-900/50 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/10 p-6 text-left transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:border-purple-400 dark:hover:border-purple-700"
+                    >
+                        <!-- Background Pattern -->
+                        <div class="absolute inset-0 opacity-5">
+                            <div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0); background-size: 32px 32px;"></div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="relative">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="p-3 bg-purple-600 dark:bg-purple-500 rounded-xl shadow-lg">
+                                    <i class="fas fa-cogs text-2xl text-white"></i>
+                                </div>
+                                <span
+                                    x-show="serviceAlertsCount > 0"
+                                    x-text="serviceAlertsCount"
+                                    class="px-3 py-1 rounded-full bg-purple-600 text-white text-sm font-bold shadow-lg"
+                                ></span>
+                            </div>
+
+                            <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                                Servis Uyarıları
+                            </h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                                İzlenen servislerdeki durum değişikliklerini takip edin
+                            </p>
+
+                            <div class="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-medium text-sm">
+                                <span>Uyarıları Görüntüle</span>
+                                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Alerts Modal -->
+    <div
+        x-show="serviceAlertsModalOpen"
+        x-cloak
+        class="fixed inset-0 z-[999] flex items-center justify-center px-4"
+        @keydown.escape.window="closeServiceAlertsModal()"
+    >
+        <!-- Backdrop -->
+        <div
+            class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            @click="closeServiceAlertsModal()"
+        ></div>
+
+        <!-- Modal Panel -->
+        <div
+            class="relative w-full max-w-4xl rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+            @click.stop
+        >
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-900/20">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <div class="h-10 w-10 rounded-xl bg-purple-600/10 dark:bg-purple-400/10 flex items-center justify-center">
+                                <i class="fas fa-cogs text-purple-600 dark:text-purple-400 text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                    Servis Uyarıları
+                                </h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-300">
+                                    İzlenen servislerdeki durum değişiklikleri
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="shrink-0 h-9 w-9 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
+                        @click="closeServiceAlertsModal()"
+                        aria-label="Kapat"
+                    >
+                        <svg class="h-5 w-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    Toplam: <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="serviceAlerts.length"></span> değişiklik
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        @click="refreshServiceAlerts()"
+                        class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200"
+                    >
+                        <i class="fas fa-sync mr-1"></i> Yenile
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="px-6 py-4 max-h-[60vh] overflow-y-auto">
+                <!-- Loading -->
+                <template x-if="serviceAlertsLoading">
+                    <div class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                        <span>Servis uyarıları yükleniyor...</span>
+                    </div>
+                </template>
+
+                <!-- Empty -->
+                <template x-if="!serviceAlertsLoading && serviceAlerts.length === 0">
+                    <div class="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-6 text-center">
+                        <div class="inline-flex p-4 bg-green-600/10 dark:bg-green-400/10 rounded-full mb-3">
+                            <i class="fas fa-check text-2xl text-green-600 dark:text-green-400"></i>
+                        </div>
+                        <div class="font-semibold text-gray-900 dark:text-gray-100 mb-1">Her Şey Normal</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-300">
+                            Son 24 saatte izlenen servislerde durum değişikliği tespit edilmedi.
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Alerts List -->
+                <template x-if="!serviceAlertsLoading && serviceAlerts.length > 0">
+                    <div class="space-y-3">
+                        <template x-for="alert in serviceAlerts" :key="alert.id">
+                            <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div class="flex-1 min-w-0">
+                                        <!-- Service Info -->
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <i class="fas fa-server text-purple-600 dark:text-purple-400"></i>
+                                            <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="alert.display_name || alert.service_name"></span>
+                                        </div>
+
+                                        <!-- Target Info -->
+                                        <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                            <i class="fas fa-hdd text-xs"></i>
+                                            <span x-text="alert.target_name"></span>
+                                            <span class="text-gray-400 dark:text-gray-600">•</span>
+                                            <span x-text="alert.target_address"></span>
+                                        </div>
+
+                                        <!-- Status Change -->
+                                        <div class="flex items-center gap-2 text-sm">
+                                            <span
+                                                class="px-2 py-1 rounded-full text-xs font-medium"
+                                                :class="{
+                                                    'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400': alert.old_status === 'running',
+                                                    'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400': alert.old_status === 'stopped',
+                                                    'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400': alert.old_status === 'unknown'
+                                                }"
+                                                x-text="alert.old_status === 'running' ? 'Çalışıyor' : alert.old_status === 'stopped' ? 'Durdu' : 'Bilinmiyor'"
+                                            ></span>
+                                            <i class="fas fa-arrow-right text-gray-400 text-xs"></i>
+                                            <span
+                                                class="px-2 py-1 rounded-full text-xs font-medium"
+                                                :class="{
+                                                    'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400': alert.new_status === 'running',
+                                                    'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400': alert.new_status === 'stopped',
+                                                    'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400': alert.new_status === 'unknown'
+                                                }"
+                                                x-text="alert.new_status === 'running' ? 'Çalışıyor' : alert.new_status === 'stopped' ? 'Durdu' : 'Bilinmiyor'"
+                                            ></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Timestamp -->
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                                        <i class="far fa-clock mr-1"></i>
+                                        <span x-text="formatDateTime(alert.changed_at)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60">
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Son 24 saatteki değişiklikler gösteriliyor. Daha eski kayıtlar için hedef detay sayfasını ziyaret edin.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Main Layout -->
+    <div class="min-h-full flex flex-col">
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+            <div class="px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Logo + Hamburger -->
+                    <div class="flex items-center gap-4">
+                        <!-- Mobile Hamburger -->
+                        <button 
+                            type="button"
+                            class="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 md:hidden"
+                            @click="sidebarOpen = true"
+                        >
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+
+                        <div class="hidden md:flex items-center">
+                        <div
+                        class="
+                            bg-white/85 dark:bg-white/87
+                            rounded-lg
+                            px-6 py-1.5
+                            shadow-sm
+                            ring-1 ring-black/5
+                            backdrop-blur-sm
+                            inline-flex
+                            items-center
+                            justify-center
+                        "
+                        >
+
+                        <img
+                        src="/static/admin/images/systrackbyz.png"
+                        alt="SysTrack by Z"
+                        class="h-10 w-auto object-contain select-none scale-[1.45]"
+                        draggable="false"
+                        />
+
+                        </div>
+
+                        <!--
+                        <div class="ml-4">
+                            <h1 class="text-xl font-semibold text-primary-600 dark:text-primary-400">SysTrack</h1>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Ağ İzleme Sistemi</p>
+                        </div>
+                        -->
+                        </div>
+
+                    </div>
+
+                    <!-- Right side -->
+                    <div class="flex items-center justify-end gap-3 flex-1">
+                        <!-- System Stats (desktop, lg ve üstü) -->
+                        <div class="hidden lg:flex items-center gap-2">
+                            <!-- CPU -->
+                            <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                                 :class="serverStats.cpu > 90 ? 'bg-red-100 dark:bg-red-900' : (serverStats.cpu > 70 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-green-100 dark:bg-green-900')">
+                                <svg class="h-4 w-4"
+                                     :class="serverStats.cpu > 90 ? 'text-red-600 dark:text-red-400' : (serverStats.cpu > 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400')"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                                </svg>
+                                <div class="text-xs">
+                                    <div class="text-gray-600 dark:text-gray-400 font-medium">CPU</div>
+                                    <div class="font-bold"
+                                         :class="serverStats.cpu > 90 ? 'text-red-700 dark:text-red-300' : (serverStats.cpu > 70 ? 'text-yellow-700 dark:text-yellow-300' : 'text-green-700 dark:text-green-300')"
+                                         x-text="serverStats.cpu.toFixed(1) + '%'">0%</div>
+                                </div>
+                            </div>
+
+                            <!-- RAM -->
+                            <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                                 :class="serverStats.ram.percent > 90 ? 'bg-red-100 dark:bg-red-900' : (serverStats.ram.percent > 70 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-blue-100 dark:bg-blue-900')">
+                                <svg class="h-4 w-4"
+                                     :class="serverStats.ram.percent > 90 ? 'text-red-600 dark:text-red-400' : (serverStats.ram.percent > 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400')"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <div class="text-xs">
+                                    <div class="text-gray-600 dark:text-gray-400 font-medium">RAM</div>
+                                    <div class="font-bold"
+                                         :class="serverStats.ram.percent > 90 ? 'text-red-700 dark:text-red-300' : (serverStats.ram.percent > 70 ? 'text-yellow-700 dark:text-yellow-300' : 'text-blue-700 dark:text-blue-300')"
+                                         x-text="serverStats.ram.usedGb.toFixed(1) + '/' + serverStats.ram.totalGb.toFixed(1) + ' GB'">0/0 GB</div>
+                                </div>
+                            </div>
+
+                            <!-- Disk -->
+                            <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                                 :class="serverStats.disk.percent > 90 ? 'bg-red-100 dark:bg-red-900' : (serverStats.disk.percent > 70 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-purple-100 dark:bg-purple-900')">
+                                <svg class="h-4 w-4"
+                                     :class="serverStats.disk.percent > 90 ? 'text-red-600 dark:text-red-400' : (serverStats.disk.percent > 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-purple-600 dark:text-purple-400')"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                                </svg>
+                                <div class="text-xs">
+                                    <div class="text-gray-600 dark:text-gray-400 font-medium">Disk</div>
+                                    <div class="font-bold"
+                                         :class="serverStats.disk.percent > 90 ? 'text-red-700 dark:text-red-300' : (serverStats.disk.percent > 70 ? 'text-yellow-700 dark:text-yellow-300' : 'text-purple-700 dark:text-purple-300')"
+                                         x-text="serverStats.disk.usedGb.toFixed(0) + '/' + serverStats.disk.totalGb.toFixed(0) + ' GB'">0/0 GB</div>
+                                </div>
+                            </div>
+
+                            <!-- Temperature -->
+                            <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                                 :class="!serverStats.temperature || serverStats.temperature === 0 ? 'bg-gray-100 dark:bg-gray-700' : (serverStats.temperature > 80 ? 'bg-red-100 dark:bg-red-900' : (serverStats.temperature > 70 ? 'bg-orange-100 dark:bg-orange-900' : 'bg-cyan-100 dark:bg-cyan-900'))">
+                                <!-- Termometre ikonu -->
+                                <i class="fa fa-thermometer-quarter"
+                                   :class="!serverStats.temperature || serverStats.temperature === 0 ? 'text-gray-600 dark:text-gray-400' : (serverStats.temperature > 80 ? 'text-red-600 dark:text-red-400' : (serverStats.temperature > 70 ? 'text-orange-600 dark:text-orange-400' : 'text-cyan-600 dark:text-cyan-400'))"></i>
+                                <div class="text-xs">
+                                    <div class="text-gray-600 dark:text-gray-400 font-medium">Sıcaklık</div>
+                                    <div class="font-bold"
+                                         :class="!serverStats.temperature || serverStats.temperature === 0 ? 'text-gray-600 dark:text-gray-400' : (serverStats.temperature > 80 ? 'text-red-700 dark:text-red-300' : (serverStats.temperature > 70 ? 'text-orange-700 dark:text-orange-300' : 'text-cyan-700 dark:text-cyan-300'))"
+                                         x-text="serverStats.temperature && serverStats.temperature > 0 ? serverStats.temperature.toFixed(1) + '°C' : 'N/A'">N/A</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- License Info (sadece md ve üzeri) -->
+                        <div class="hidden md:flex items-center space-x-1.5 px-2.5 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <svg class="h-4 w-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                            <div class="text-xs">
+                                <div class="text-gray-500 dark:text-gray-400">Lisans</div>
+                                <div class="font-medium" 
+                                     :class="licenseExpired ? 'text-red-600 dark:text-red-400' : (licenseExpiresSoon ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400')"
+                                     x-text="licenseExpiryText"></div>
+                            </div>
+                        </div>
+
+                        <!-- Language Switcher -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open"
+                                class="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-sm border border-gray-200 dark:border-gray-600 transition-all duration-200">
+                                <span id="current-flag" class="fi fi-tr rounded shadow-sm" style="width: 22px; height: 16px; display: inline-block;"></span>
+                                <svg class="w-3.5 h-3.5 text-gray-600 dark:text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+
+                            <!-- Dropdown -->
+                            <div x-show="open"
+                                 @click.away="open = false"
+                                 x-transition:enter="transition ease-out duration-200"
+                                 x-transition:enter-start="transform opacity-0 scale-95 -translate-y-2"
+                                 x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
+                                 x-transition:leave="transition ease-in duration-150"
+                                 x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
+                                 x-transition:leave-end="transform opacity-0 scale-95 -translate-y-2"
+                                 class="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+                                <div class="py-1">
+                                    <button onclick="switchLanguage('tr')"
+                                            class="w-full flex items-center gap-3 px-4 py-2.5 text-left group hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent dark:hover:from-primary-900/20 dark:hover:to-transparent transition-all duration-200 border-l-4 border-transparent hover:border-primary-500">
+                                        <span class="fi fi-tr rounded-sm shadow-md transform group-hover:scale-110 transition-transform duration-200" style="width: 28px; height: 20px; display: inline-block;"></span>
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-primary-600 dark:group-hover:text-primary-400">Türkçe</span>
+                                        </div>
+                                        <svg class="w-5 h-5 ml-auto text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </button>
+                                    <div class="mx-3 my-1 border-t border-gray-200 dark:border-gray-700"></div>
+                                    <button onclick="switchLanguage('en')"
+                                            class="w-full flex items-center gap-4 px-5 py-3 text-left group hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent dark:hover:from-primary-900/20 dark:hover:to-transparent transition-all duration-200 border-l-4 border-transparent hover:border-primary-500">
+                                        <span class="fi fi-gb rounded-sm shadow-md transform group-hover:scale-110 transition-transform duration-200" style="width: 32px; height: 24px; display: inline-block;"></span>
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-primary-600 dark:group-hover:text-primary-400">İngilizce</span>
+                                        </div>
+                                        <svg class="w-5 h-5 ml-auto text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </button>
+                                    <div class="mx-3 my-1 border-t border-gray-200 dark:border-gray-700"></div>
+                                     <button onclick="switchLanguage('de')"
+                                             class="w-full flex items-center gap-4 px-5 py-3 text-left group hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent dark:hover:from-primary-900/20 dark:hover:to-transparent transition-all duration-200 border-l-4 border-transparent hover:border-primary-500">
+                                         <span class="fi fi-de rounded-sm shadow-md transform group-hover:scale-110 transition-transform duration-200" style="width: 32px; height: 24px; display: inline-block;"></span>
+                                         <div class="flex flex-col">
+                                             <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-primary-600 dark:group-hover:text-primary-400">Almanca</span>
+                                         </div>
+                                         <svg class="w-5 h-5 ml-auto text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                         </svg>
+                                     </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Theme Toggle -->
+                        <button @click="toggleTheme()"
+                            class="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            <svg x-show="!isDark" class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                            </svg>
+                            <svg x-show="isDark" class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Notifications Button (IP & Service Alerts) -->
+                        <div class="relative">
+                        <button
+                            type="button"
+                            @click="openNotificationsModal()"
+                            class="relative p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                            :class="(ipAlertsUnreadCount > 0 || serviceAlertsCount > 0) ? 'ip-detect-pulse' : ''"
+                            aria-label="Bildirimler"
+                        >
+                            <span class="fas fa-bell h-5 w-5 text-gray-600 dark:text-gray-400"></span>
+
+                            <!-- IP Alerts Badge (Bottom Right - Red) -->
+                            <span
+                            x-show="ipAlertsUnreadCount > 0"
+                            x-text="ipAlertsUnreadCount"
+                            class="absolute -bottom-1 -right-1 min-w-[16px] h-[16px] px-0.5 rounded-full bg-red-600 text-white text-[10px] leading-[16px] text-center font-medium"
+                            ></span>
+
+                            <!-- Service Alerts Badge (Top Right - Purple) -->
+                            <span
+                            x-show="serviceAlertsCount > 0"
+                            x-text="serviceAlertsCount"
+                            class="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 rounded-full bg-purple-600 text-white text-[10px] leading-[16px] text-center font-medium"
+                            ></span>
+                        </button>
+                        </div>
+
+                        <!-- User Menu -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" 
+                                class="flex items-center space-x-1.5 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                <div class="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+                                    <span class="text-white text-sm font-medium" x-text="userInitials"></span>
+                                </div>
+
+                                <!-- E-posta: küçük ekranlarda gizli, daha büyükte kısaltılmış -->
+                                <span class="hidden sm:inline-block max-w-[140px] truncate text-gray-700 dark:text-gray-300"
+                                    x-text="userEmail"></span>
+
+                                <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            
+                            <!-- Dropdown -->
+                            <div x-show="open" 
+                                 @click.away="open = false"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                                
+                                <button @click="logout()" class="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">Çıkış Yap</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex flex-1 max-w-full overflow-x-hidden">
+            <!-- Sidebar (DESKTOP) -->
+            <nav class="w-64 bg-white dark:bg-gray-800 shadow-sm border-r border-gray-200 dark:border-gray-700 min-h-screen hidden md:block">
+                <div class="p-4">
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="#dashboard" 
+                               @click="navigateTo('dashboard')"
+                               :class="currentRoute === 'dashboard' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"></path>
+                                </svg>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li x-show="canViewModule('targets')">
+                            <a href="#targets" 
+                               @click="navigateTo('targets')"
+                               :class="currentRoute === 'targets' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>Hedefler</span>
+                            </a>
+                        </li>
+                        <li x-show="canViewModule('ip_scanner')">
+                            <a href="#ip-scanner"
+                               @click="navigateTo('ip-scanner')"
+                               :class="currentRoute === 'ip-scanner' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 0v10m0-10c2.21 0 4-1.79 4-4m-4 4c-2.21 0-4-1.79-4-4"></path>
+                                </svg>
+                                <span>IP Tarayıcı</span>
+                            </a>
+                        </li>
+                        <li x-show="canViewModule('inventory')">
+                            <a href="#inventory"
+                               @click="navigateTo('inventory')"
+                               :class="currentRoute === 'inventory' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v10m0-10L4 7m0 0v10l8 4"></path>
+                                </svg>
+                                <span>Envanter Yönetimi</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#server-metrics"
+                               @click="navigateTo('server-metrics')"
+                               :class="currentRoute === 'server-metrics' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                                </svg>
+                                <span>Server Durumu</span>
+                            </a>
+                        </li>
+                        
+                        <li x-show="canViewModule('sensors')">
+                            <a href="#sensors"
+                               @click="navigateTo('sensors')"
+                               :class="currentRoute === 'sensors' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 14.25a5.25 5.25 0 017.5 0M6 11a8.25 8.25 0 0112 0M3.75 7.75a11.25 11.25 0 0116.5 0"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/>
+                                </svg>
+                                <span>Ortam İzleme</span>
+                            </a>
+                        </li>
+                       
+                        <li x-show="canViewModule('notifications') || canViewModule('notification_settings')"
+                            x-data="{ open: ['notification-history','notification-settings','new-notification-templates'].includes(currentRoute) }"
+                            x-effect="if(['notification-history','notification-settings','new-notification-templates'].includes(currentRoute)) open = true">
+                            <button @click="open = !open"
+                                    class="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                    <span>Bildirimler</span>
+                                </div>
+                                <svg class="h-4 w-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- Submenu -->
+                            <div x-show="open" x-transition class="ml-6 mt-2 space-y-1">
+                                <a href="#notification-history"
+                                   x-show="canViewModule('notifications')"
+                                   @click.prevent="navigateTo('notification-history')"
+                                   :class="currentRoute === 'notification-history' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <span>Bildirim Geçmişi</span>
+                                </a>
+                                <a href="#notification-settings"
+                                   x-show="canViewModule('notification_settings')"
+                                   @click.prevent="navigateTo('notification-settings')"
+                                   :class="currentRoute === 'notification-settings' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    <span>Bildirim Ayarları</span>
+                                </a>
+                                <a href="#new-notification-templates"
+                                   x-show="canViewModule('notification_settings')"
+                                   @click.prevent="navigateTo('new-notification-templates')"
+                                   :class="currentRoute === 'new-notification-templates' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span>Bildirim Şablonları</span>
+                                </a>
+                            </div>
+                        </li>
+                        <li x-show="canViewModule('reporting')">
+                            <a href="#reporting"
+                               @click="navigateTo('reporting')"
+                               :class="currentRoute === 'reporting' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <span>Raporlama</span>
+                            </a>
+                        </li>
+                        <li x-show="canViewModule('user_management') || canViewModule('module_permissions')"
+                            x-data="{ open: ['users','module-permissions'].includes(currentRoute) }"
+                            x-effect="if(['users','module-permissions'].includes(currentRoute)) open = true">
+                            <button @click="open = !open"
+                                    class="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="h-5 w-5 inline-flex items-center justify-center shrink-0">
+                                        <i class="fas fa-users" aria-hidden="true"></i>
+                                    </span>
+                                    <span>Kullanıcılar</span>
+                                </div>
+                                <svg class="h-4 w-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- Submenu -->
+                            <div x-show="open" x-transition class="ml-6 mt-2 space-y-1">
+                                <a href="#users"
+                                   x-show="canViewModule('user_management')"
+                                   @click.prevent="navigateTo('users')"
+                                   :class="currentRoute === 'users' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                    <span class="h-4 w-4 inline-flex items-center justify-center shrink-0">
+                                        <i class="fas fa-user-cog" aria-hidden="true"></i>
+                                    </span>
+                                    <span>Kullanıcı Yönetimi</span>
+                                </a>
+                                <a href="#module-permissions"
+                                   x-show="canViewModule('module_permissions')"
+                                   @click.prevent="navigateTo('module-permissions')"
+                                   :class="currentRoute === 'module-permissions' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                    </svg>
+                                    <span>Modül İzinleri</span>
+                                </a>
+                            </div>
+                        </li>
+                        <li x-show="canViewModule('network_settings')">
+                            <a href="#network-settings"
+                               @click.prevent="navigateTo('network-settings')"
+                               :class="currentRoute === 'network-settings' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <span class="h-5 w-5 inline-flex items-center justify-center shrink-0">
+                                    <i class="fas fa-network-wired" aria-hidden="true"></i>
+                                </span>
+                                <span>Ağ Ayarları</span>
+                            </a>
+                        </li>
+                        <li x-show="canViewModule('backup')">
+                            <a href="#backup"
+                               @click.prevent="navigateTo('backup')"
+                               :class="currentRoute === 'backup' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                               class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                <span>Yedekleme</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                        <a href="/docs.html" target="_blank"
+                        class="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm text-blue-700 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                            <span>Dokümantasyon</span>
+                        </a>
+
+                        <!-- Domain Tracker Button -->
+                        <a href="https://domaintracker.beyzsystem.com/" target="_blank"
+                        class="group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-purple-700 via-purple-900 to-black shadow-lg transition-all duration-500 ease-in-out hover:shadow-2xl hover:shadow-purple-900/50 hover:-translate-y-0.5">
+                            <div class="flex items-center space-x-2">
+                                <svg class="h-4 w-4 transition-transform duration-500 ease-in-out group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                </svg>
+                                <span class="transition-all duration-500 ease-in-out">DomainTrack</span>
+                            </div>
+                            <svg class="h-4 w-4 transition-all duration-500 ease-in-out group-hover:translate-x-1.5 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
+                <div id="view-root" class="min-h-screen max-w-full">
+                    <!-- Content will be loaded here -->
+                </div>
+            </main>
+        </div>
+
+        <!-- Mobile Sidebar (OFFCANVAS) -->
+        <div 
+            class="fixed inset-0 z-40 flex md:hidden"
+            x-show="sidebarOpen"
+            x-transition.opacity
+        >
+            <!-- Overlay -->
+            <div class="fixed inset-0 bg-black bg-opacity-40" @click="sidebarOpen = false"></div>
+
+            <!-- Drawer -->
+            <nav 
+                class="relative z-50 w-64 bg-white dark:bg-gray-800 shadow-xl border-r border-gray-200 dark:border-gray-700 min-h-full flex flex-col transform transition-transform duration-200"
+                x-transition:enter="transform transition ease-out duration-200"
+                x-transition:enter-start="-translate-x-full"
+                x-transition:enter-end="translate-x-0"
+                x-transition:leave="transform transition ease-in duration-150"
+                x-transition:leave-start="translate-x-0"
+                x-transition:leave-end="-translate-x-full"
+                @click.stop
+            >
+                <!-- Header in drawer -->
+                <div class="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <img src="/static/admin/images/systrackbyz.png" 
+                             alt="SysTrack by Z" 
+                             class="h-12 w-auto object-contain select-none bg-white rounded-lg p-1"
+                             style="max-width: 240px;"
+                        >
+                        <!-- <div>
+                            <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">SysTrack</div>
+                            <div class="text-[11px] text-gray-500 dark:text-gray-400">Ağ İzleme Sistemi</div>
+                        </div> -->
+                    </div>
+                    <button
+                        class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click="sidebarOpen = false"
+                    >
+                        <svg
+                            class="h-5 w-5 text-gray-700 dark:text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Scrollable nav -->
+                <div class="flex-1 overflow-y-auto">
+                    <div class="p-4">
+                        <ul class="space-y-2">
+                            <li>
+                                <a href="#dashboard" 
+                                   @click="navigateTo('dashboard'); sidebarOpen = false"
+                                   :class="currentRoute === 'dashboard' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"></path>
+                                    </svg>
+                                    <span>Dashboard</span>
+                                </a>
+                            </li>
+                            <li x-show="canViewModule('targets')">
+                                <a href="#targets" 
+                                   @click="navigateTo('targets'); sidebarOpen = false"
+                                   :class="currentRoute === 'targets' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <span>Hedefler</span>
+                                </a>
+                            </li>
+                            <li x-show="canViewModule('ip_scanner')">
+                                <a href="#ip-scanner"
+                                   @click="navigateTo('ip-scanner'); sidebarOpen = false"
+                                   :class="currentRoute === 'ip-scanner' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 0v10m0-10c2.21 0 4-1.79 4-4m-4 4c-2.21 0-4-1.79-4-4"></path>
+                                    </svg>
+                                    <span>IP Tarayıcı</span>
+                                </a>
+                            </li>
+                            <li x-show="canViewModule('inventory')">
+                                <a href="#inventory"
+                                   @click="navigateTo('inventory'); sidebarOpen = false"
+                                   :class="currentRoute === 'inventory' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m8 4v10m0-10L4 7m0 0v10l8 4"></path>
+                                    </svg>
+                                    <span>Envanter</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#server-metrics"
+                                   @click="navigateTo('server-metrics'); sidebarOpen = false"
+                                   :class="currentRoute === 'server-metrics' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                                    </svg>
+                                    <span>Server Durumu</span>
+                                </a>
+                            </li>
+                            <li x-show="canViewModule('notifications') || canViewModule('notification_settings')"
+                                x-data="{ open: ['notification-history','notification-settings','new-notification-templates'].includes(currentRoute) }"
+                                x-effect="if(['notification-history','notification-settings','new-notification-templates'].includes(currentRoute)) open = true">
+                                <button @click="open = !open"
+                                        class="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-3">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                        </svg>
+                                        <span>Bildirimler</span>
+                                    </div>
+                                    <svg class="h-4 w-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+
+                                <!-- Submenu -->
+                                <div x-show="open" x-transition class="ml-6 mt-2 space-y-1">
+                                    <a href="#notification-history"
+                                       x-show="canViewModule('notifications')"
+                                       @click.prevent="navigateTo('notification-history'); sidebarOpen = false"
+                                       :class="currentRoute === 'notification-history' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                       class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span>Bildirim Geçmişi</span>
+                                    </a>
+                                    <a href="#notification-settings"
+                                       x-show="canViewModule('notification_settings')"
+                                       @click.prevent="navigateTo('notification-settings'); sidebarOpen = false"
+                                       :class="currentRoute === 'notification-settings' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                       class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                        <span>Bildirim Ayarları</span>
+                                    </a>
+                                    <a href="#new-notification-templates"
+                                       x-show="canViewModule('notification_settings')"
+                                       @click.prevent="navigateTo('new-notification-templates'); sidebarOpen = false"
+                                       :class="currentRoute === 'new-notification-templates' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                       class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <span>Bildirim Şablonları</span>
+                                    </a>
+                                </div>
+                            </li>
+                            <li x-show="canViewModule('reporting')">
+                                <a href="#reporting"
+                                   @click="navigateTo('reporting'); sidebarOpen = false"
+                                   :class="currentRoute === 'reporting' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    <span>Raporlama</span>
+                                </a>
+                            </li>
+                            <li x-show="canViewModule('user_management') || canViewModule('module_permissions')"
+                                x-data="{ open: ['users','module-permissions'].includes(currentRoute) }"
+                                x-effect="if(['users','module-permissions'].includes(currentRoute)) open = true">
+                                <button @click="open = !open"
+                                        class="flex items-center justify-between w-full px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="h-5 w-5 inline-flex items-center justify-center shrink-0">
+                                            <i class="fas fa-users" aria-hidden="true"></i>
+                                        </span>
+                                        <span>Kullanıcılar</span>
+                                    </div>
+                                    <svg class="h-4 w-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+
+                                <!-- Submenu -->
+                                <div x-show="open" x-transition class="ml-6 mt-2 space-y-1">
+                                    <a href="#users"
+                                       x-show="canViewModule('user_management')"
+                                       @click.prevent="navigateTo('users'); sidebarOpen = false"
+                                       :class="currentRoute === 'users' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                       class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                        <span class="h-4 w-4 inline-flex items-center justify-center shrink-0">
+                                            <i class="fas fa-user-cog" aria-hidden="true"></i>
+                                        </span>
+                                        <span>Kullanıcı Yönetimi</span>
+                                    </a>
+                                    <a href="#module-permissions"
+                                       x-show="canViewModule('module_permissions')"
+                                       @click.prevent="navigateTo('module-permissions'); sidebarOpen = false"
+                                       :class="currentRoute === 'module-permissions' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                       class="flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                        </svg>
+                                        <span>Modül İzinleri</span>
+                                    </a>
+                                </div>
+                            </li>
+                            <li x-show="canViewModule('network_settings')">
+                                <a href="#network-settings"
+                                   @click.prevent="navigateTo('network-settings'); sidebarOpen = false"
+                                   :class="currentRoute === 'network-settings' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                    <span class="h-5 w-5 inline-flex items-center justify-center shrink-0">
+                                        <i class="fas fa-network-wired" aria-hidden="true"></i>
+                                    </span>
+                                    <span>Ağ Ayarları</span>
+                                </a>
+                            </li>
+                            <li x-show="canViewModule('backup')">
+                                <a href="#backup"
+                                   @click.prevent="navigateTo('backup'); sidebarOpen = false"
+                                   :class="currentRoute === 'backup' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                   class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                    </svg>
+                                    <span>Yedekleme</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bottom stats + license + docs in drawer -->
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                    <!-- System Stats -->
+                    <div class="space-y-2">
+                        <!-- CPU -->
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                             :class="serverStats.cpu > 90 ? 'bg-red-100 dark:bg-red-900' : (serverStats.cpu > 70 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-green-100 dark:bg-green-900')">
+                            <svg class="h-4 w-4"
+                                 :class="serverStats.cpu > 90 ? 'text-red-600 dark:text-red-400' : (serverStats.cpu > 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400')"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                            </svg>
+                            <div class="text-xs">
+                                <div class="text-gray-600 dark:text-gray-400 font-medium">CPU</div>
+                                <div class="font-bold"
+                                     :class="serverStats.cpu > 90 ? 'text-red-700 dark:text-red-300' : (serverStats.cpu > 70 ? 'text-yellow-700 dark:text-yellow-300' : 'text-green-700 dark:text-green-300')"
+                                     x-text="serverStats.cpu.toFixed(1) + '%'">0%</div>
+                            </div>
+                        </div>
+
+                        <!-- RAM -->
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                             :class="serverStats.ram.percent > 90 ? 'bg-red-100 dark:bg-red-900' : (serverStats.ram.percent > 70 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-blue-100 dark:bg-blue-900')">
+                            <svg class="h-4 w-4"
+                                 :class="serverStats.ram.percent > 90 ? 'text-red-600 dark:text-red-400' : (serverStats.ram.percent > 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400')"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <div class="text-xs">
+                                <div class="text-gray-600 dark:text-gray-400 font-medium">RAM</div>
+                                <div class="font-bold"
+                                     :class="serverStats.ram.percent > 90 ? 'text-red-700 dark:text-red-300' : (serverStats.ram.percent > 70 ? 'text-yellow-700 dark:text-yellow-300' : 'text-blue-700 dark:text-blue-300')"
+                                     x-text="serverStats.ram.usedGb.toFixed(1) + '/' + serverStats.ram.totalGb.toFixed(1) + ' GB'">0/0 GB</div>
+                            </div>
+                        </div>
+
+                        <!-- Disk -->
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                             :class="serverStats.disk.percent > 90 ? 'bg-red-100 dark:bg-red-900' : (serverStats.disk.percent > 70 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-purple-100 dark:bg-purple-900')">
+                            <svg class="h-4 w-4"
+                                 :class="serverStats.disk.percent > 90 ? 'text-red-600 dark:text-red-400' : (serverStats.disk.percent > 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-purple-600 dark:text-purple-400')"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                            </svg>
+                            <div class="text-xs">
+                                <div class="text-gray-600 dark:text-gray-400 font-medium">Disk</div>
+                                <div class="font-bold"
+                                     :class="serverStats.disk.percent > 90 ? 'text-red-700 dark:text-red-300' : (serverStats.disk.percent > 70 ? 'text-yellow-700 dark:text-yellow-300' : 'text-purple-700 dark:text-purple-300')"
+                                     x-text="serverStats.disk.usedGb.toFixed(0) + '/' + serverStats.disk.totalGb.toFixed(0) + ' GB'">0/0 GB</div>
+                            </div>
+                        </div>
+
+                        <!-- Temperature -->
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                             :class="!serverStats.temperature || serverStats.temperature === 0 ? 'bg-gray-100 dark:bg-gray-700' : (serverStats.temperature > 80 ? 'bg-red-100 dark:bg-red-900' : (serverStats.temperature > 70 ? 'bg-orange-100 dark:bg-orange-900' : 'bg-cyan-100 dark:bg-cyan-900'))">
+                            <!-- Termometre ikonu -->
+                            <i class="fa fa-thermometer-quarter"
+                               :class="!serverStats.temperature || serverStats.temperature === 0 ? 'text-gray-600 dark:text-gray-400' : (serverStats.temperature > 80 ? 'text-red-600 dark:text-red-400' : (serverStats.temperature > 70 ? 'text-orange-600 dark:text-orange-400' : 'text-cyan-600 dark:text-cyan-400'))"></i>
+                            <div class="text-xs">
+                                <div class="text-gray-600 dark:text-gray-400 font-medium">Sıcaklık</div>
+                                <div class="font-bold"
+                                     :class="!serverStats.temperature || serverStats.temperature === 0 ? 'text-gray-600 dark:text-gray-400' : (serverStats.temperature > 80 ? 'text-red-700 dark:text-red-300' : (serverStats.temperature > 70 ? 'text-orange-700 dark:text-orange-300' : 'text-cyan-700 dark:text-cyan-300'))"
+                                     x-text="serverStats.temperature && serverStats.temperature > 0 ? serverStats.temperature.toFixed(1) + '°C' : 'N/A'">N/A</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- License Info -->
+                    <div class="flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                        <svg class="h-4 w-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        <div class="text-xs">
+                            <div class="text-gray-500 dark:text-gray-400">Lisans</div>
+                            <div class="font-medium" 
+                                 :class="licenseExpired ? 'text-red-600 dark:text-red-400' : (licenseExpiresSoon ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400')"
+                                 x-text="licenseExpiryText"></div>
+                        </div>
+                    </div>
+
+                    <!-- Docs Link -->
+                    <a href="/docs.html" target="_blank" class="flex items-center justify-center space-x-2 px-3 py-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors text-sm font-medium">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        <span>Dokümantasyon</span>
+                    </a>
+
+                    <!-- Domain Tracker Link -->
+                    <a href="https://domaintracker.beyzsystem.com/" target="_blank" class="group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-purple-700 via-purple-900 to-black shadow-lg transition-all duration-500 ease-in-out hover:shadow-2xl hover:shadow-purple-900/50 hover:-translate-y-0.5">
+                        <div class="flex items-center space-x-2">
+                            <svg class="h-4 w-4 transition-transform duration-500 ease-in-out group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                            </svg>
+                            <span class="transition-all duration-500 ease-in-out">DomainTrack</span>
+                        </div>
+                        <svg class="h-4 w-4 transition-all duration-500 ease-in-out group-hover:translate-x-1.5 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/admin/js/language-switcher.js"></script>
+    <script src="/static/admin/js/helpers.js"></script>
+    <script src="/static/admin/js/toast.js"></script>
+    <script src="/static/admin/js/notification-manager.js"></script>
+    <script src="/static/admin/js/modal.js"></script>
+    <script src="/static/admin/js/ws.js"></script>
+    <script src="/static/admin/js/user-management.js"></script>
+    <script src="/static/admin/js/module-permissions.js"></script>
+    <script src="/static/admin/js/filter-options-loader.js"></script>
+    <script src="/static/admin/js/targets.js"></script>
+    <script src="/static/admin/js/target_services.js"></script>
+    <script src="/static/admin/js/sensors.js?v=20260505-camera13"></script>
+    <script src="/static/admin/js/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
+
+</body>
+</html>

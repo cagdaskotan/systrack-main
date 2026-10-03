@@ -1,0 +1,391 @@
+<div class="space-y-8" x-data="notificationLogsApp()" x-init="init()" x-cloak x-on:keydown.escape.window="closeDetails">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm px-6 py-5">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div class="space-y-1">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Bildirim Geçmişi</h1>
+                <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+                    E-posta ve Telegram bildirimlerinin geçmişini inceleyin, kanal ve durum filtreleriyle arama yapın.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Toplam gönderim</p>
+                    <h2 class="text-3xl font-semibold text-gray-900 dark:text-white" x-text="summary.total || 0">0</h2>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 flex items-center justify-center">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-gray-400 dark:text-gray-500" x-text="summary.last_sent_at ? 'Son gönderim: ' + formatDate(summary.last_sent_at) : 'Henüz gönderim yok'"></p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Başarılı gönderim</p>
+                    <h2 class="text-3xl font-semibold text-emerald-600" x-text="summary.sent || 0">0</h2>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                Başarı oranı:
+                <span class="font-semibold text-emerald-600 dark:text-emerald-400" x-text="successRate() + '%'">0%</span>
+            </p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Başarısız gönderim</p>
+                    <h2 class="text-3xl font-semibold text-red-600" x-text="summary.failed || 0">0</h2>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300 flex items-center justify-center">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400" x-text="summary.failed ? 'Sorun tespiti gerekli' : 'Her şey yolunda'"></p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Kanal dağılımı</p>
+            <div class="flex gap-4">
+                <div class="flex-1 bg-blue-50 dark:bg-blue-500/10 rounded-lg p-3">
+                    <p class="text-xs text-blue-600 dark:text-blue-300 uppercase tracking-wide">Email</p>
+                    <p class="text-lg font-semibold text-blue-700 dark:text-blue-200" x-text="summary.email || 0">0</p>
+                </div>
+                <div class="flex-1 bg-cyan-50 dark:bg-cyan-500/10 rounded-lg p-3">
+                    <p class="text-xs text-cyan-600 dark:text-cyan-300 uppercase tracking-wide">Telegram</p>
+                    <p class="text-lg font-semibold text-cyan-700 dark:text-cyan-200" x-text="summary.telegram || 0">0</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <div class="p-6 space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-7 gap-4">
+                <div class="lg:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Arama</label>
+                    <div class="relative">
+                        <input type="text" x-model="filters.search" placeholder="Hedef adı veya mesajda arayın"
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg pl-10 pr-4 py-2 text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <span class="absolute inset-y-0 left-0 px-3 flex items-center text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Kanal</label>
+                    <select x-model="filters.channel"
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <option value="">Tümü</option>
+                        <option value="email">Email</option>
+                        <option value="telegram">Telegram</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Durum</label>
+                    <select x-model="filters.status"
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <option value="">Tümü</option>
+                        <option value="sent">Gönderildi</option>
+                        <option value="failed">Başarısız</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Başlangıç</label>
+                    <input type="date" x-model="filters.start"
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Bitiş</label>
+                    <input type="date" x-model="filters.end"
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                </div>
+
+                <!-- Sayfa boyutu + Filtrele, aynı kolon içinde -->
+                <div class="lg:col-span-1">
+                    <div class="flex items-end gap-3">
+                        <!-- Boyut label + dropdown TAM ALAN -->
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                Boyut
+                            </label>
+                            <select x-model="filters.limit" @change="updateLimit($event.target.value)"
+                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+
+                        <!-- Filtrele butonu sağda -->
+                        <div>
+                            <button type="button" @click="applyFilters"
+                                    class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition">
+                                <i class="fas fa-filter"></i>
+                                Filtrele
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 pt-6">
+            <div x-show="error" class="mb-6 p-4 border border-red-200 bg-red-50 text-sm text-red-600 rounded-lg dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-200">
+                <strong>Hata:</strong>
+                <span x-text="error"></span>
+            </div>
+        </div>
+        <div class="px-6 pb-6">
+            <div x-show="loading" class="flex items-center justify-center py-12 text-sm text-gray-500 dark:text-gray-400 space-x-3">
+                <span class="h-3 w-3 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin"></span>
+                <span>Kayıtlar yükleniyor...</span>
+            </div>
+
+            <!-- DESKTOP TABLO (md ve üstü) -->
+            <div x-show="!loading && logs.length > 0" class="hidden md:block overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-900/40">
+                        <tr>
+                            <th class="min-w-[140px] px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gönderim tarihi</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hedef</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kanal</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Alıcılar</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mesaj</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Durum</th>
+                            <th class="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        <template x-for="log in logs" :key="log.id + '-desktop'">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60 transition">
+                                <td class="min-w-[140px] px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-200"
+                                    x-text="formatDate(log.sent_at)">
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="text-gray-900 dark:text-gray-100 font-medium" x-text="log.target_name || '-'"></div>
+                                    <div class="text-xs text-gray-400 dark:text-gray-500" x-text="log.rule_name ? 'Kural: ' + log.rule_name : ''"></div>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border"
+                                          :class="channelBadgeClasses(log.channel)">
+                                        <i :class="channelIcon(log.channel)"></i>
+                                        <span x-text="channelLabel(log.channel)"></span>
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <template x-if="log.recipients && log.recipients.length">
+                                        <div class="text-sm text-gray-700 dark:text-gray-200" x-text="log.recipients.join(', ')"></div>
+                                    </template>
+                                    <template x-if="!log.recipients || !log.recipients.length">
+                                        <span class="text-sm text-gray-400 dark:text-gray-500">-</span>
+                                    </template>
+                                </td>
+                                <td class="px-4 py-3 max-w-xs">
+                                    <div class="text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words" x-text="preview(log.body)"></div>
+                                    <template x-if="log.error">
+                                        <div class="mt-1 text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
+                                            <i class="fas fa-circle-exclamation"></i>
+                                            Hata mevcut
+                                        </div>
+                                    </template>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border"
+                                          :class="statusBadgeClasses(log.status)">
+                                        <i :class="statusIcon(log.status)"></i>
+                                        <span x-text="statusLabel(log.status)"></span>
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <button class="inline-flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                                            @click="openDetails(log)">
+                                        <i class="fas fa-eye"></i>
+                                        Detay
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- MOBİL LİSTE (md altı) -->
+            <div x-show="!loading && logs.length > 0" class="md:hidden">
+                <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <template x-for="log in logs" :key="log.id + '-mobile'">
+                        <li class="py-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="space-y-1">
+                                    <p class="text-xs text-gray-500 dark:text-gray-400" x-text="formatDate(log.sent_at)"></p>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="log.target_name || '-'"></p>
+                                    <p class="text-[11px] text-gray-400 dark:text-gray-500" x-text="log.rule_name ? 'Kural: ' + log.rule_name : ''"></p>
+                                </div>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-[11px] font-medium border"
+                                          :class="channelBadgeClasses(log.channel)">
+                                        <i :class="channelIcon(log.channel)"></i>
+                                        <span x-text="channelLabel(log.channel)"></span>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border"
+                                          :class="statusBadgeClasses(log.status)">
+                                        <i :class="statusIcon(log.status)"></i>
+                                        <span x-text="statusLabel(log.status)"></span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 space-y-1 text-xs text-gray-700 dark:text-gray-200">
+                                <p>
+                                    <span class="font-semibold text-gray-600 dark:text-gray-300">Alıcılar: </span>
+                                    <span x-text="log.recipients && log.recipients.length ? log.recipients.join(', ') : '-'"></span>
+                                </p>
+                                <p class="text-gray-700 dark:text-gray-200">
+                                    <span class="font-semibold text-gray-600 dark:text-gray-300">Mesaj: </span>
+                                    <span x-text="preview(log.body)"></span>
+                                </p>
+                                <template x-if="log.error">
+                                    <p class="flex items-center gap-1 text-red-500 dark:text-red-400">
+                                        <i class="fas fa-circle-exclamation"></i>
+                                        <span>Hata mevcut</span>
+                                    </p>
+                                </template>
+                            </div>
+
+                            <div class="mt-2 flex justify-end">
+                                <button class="inline-flex items-center gap-1 text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                                        @click="openDetails(log)">
+                                    <i class="fas fa-eye text-[11px]"></i>
+                                    <span>Detay</span>
+                                </button>
+                            </div>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <div x-show="!loading && logs.length === 0 && !error" class="py-16 text-center space-y-3">
+                <div class="h-16 w-16 mx-auto rounded-full bg-gray-100 dark:bg-gray-900 text-gray-400 dark:text-gray-500 flex items-center justify-center">
+                    <i class="fas fa-inbox text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Kayıt bulunamadı</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Filtreleri değiştirerek tekrar deneyebilirsiniz.</p>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+                <span x-text="pagination.total || 0"></span> kayıt | Sayfa
+                <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="currentPage()"></span> / <span x-text="totalPages()"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none"
+                        @click="prevPage" :disabled="pagination.offset === 0">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none"
+                        @click="nextPage" :disabled="!pagination.has_more">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Modal - Outside of main container -->
+<div id="notification-detail-modal"
+     x-data="{
+         showDetails: false,
+         selectedLog: null,
+         init() {
+             console.log('Turkish modal initialized');
+             window.addEventListener('open-notification-modal', (e) => {
+                 console.log('Turkish modal event received:', e.detail);
+                 this.selectedLog = e.detail;
+                 this.showDetails = true;
+                 document.body.classList.add('overflow-hidden');
+             });
+         },
+         closeDetails() {
+             this.showDetails = false;
+             this.selectedLog = null;
+             document.body.classList.remove('overflow-hidden');
+         },
+         formatDate(value) { return formatTurkishTime(value); },
+         channelLabel(channel) { const labels = { email: 'Email', telegram: 'Telegram' }; return labels[channel] || (channel || '-'); },
+         channelTextColor(channel) { const colors = { email: 'text-blue-600 dark:text-blue-300', telegram: 'text-cyan-600 dark:text-cyan-300' }; return colors[channel] || 'text-gray-700 dark:text-gray-200'; },
+         statusLabel(status) { const labels = { sent: 'Gönderildi', failed: 'Başarısız' }; return labels[status] || (status || '-'); },
+         statusIcon(status) { const icons = { sent: 'fas fa-check-circle', failed: 'fas fa-times-circle' }; return icons[status] || 'fas fa-circle-info'; },
+         statusBadgeClasses(status) { const badges = { sent: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-100 dark:border-emerald-400/40', failed: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-300 border-red-100 dark:border-red-400/40' }; return badges[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'; }
+     }"
+     x-init="init()"
+     x-show="showDetails"
+     x-transition.opacity
+     class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center px-4"
+     style="z-index: 9999;"
+     @click.self="closeDetails"
+     @keydown.escape.window="closeDetails">
+    <div x-show="showDetails" x-transition class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-3xl w-full overflow-hidden border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 px-6 py-4">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Bildirim detayı</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400" x-text="selectedLog ? formatDate(selectedLog.sent_at) : ''"></p>
+            </div>
+            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" @click="closeDetails">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        <template x-if="selectedLog">
+            <div class="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Hedef</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="selectedLog.target_name || '-'"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Kanal</p>
+                        <p class="text-sm font-medium" :class="channelTextColor(selectedLog.channel)" x-text="channelLabel(selectedLog.channel)"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Alıcılar</p>
+                        <p class="text-sm text-gray-900 dark:text-gray-100" x-text="selectedLog.recipients && selectedLog.recipients.length ? selectedLog.recipients.join(', ') : '-'"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Durum</p>
+                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border"
+                              :class="statusBadgeClasses(selectedLog.status)">
+                            <i :class="statusIcon(selectedLog.status)"></i>
+                            <span x-text="statusLabel(selectedLog.status)"></span>
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Konu</p>
+                    <p class="text-sm text-gray-900 dark:text-gray-100" x-text="selectedLog.subject || '-'"></p>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Mesaj</p>
+                    <pre class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap" x-text="selectedLog.body || '-'"></pre>
+                </div>
+                <template x-if="selectedLog.error">
+                    <div class="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg p-4 text-sm text-red-600 dark:text-red-300">
+                        <strong>Hata:</strong>
+                        <span x-text="selectedLog.error"></span>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+</div>

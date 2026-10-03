@@ -1,0 +1,278 @@
+Proje adı: SysTrack
+Şirket: Beyz System
+Hedef: Raspberry Pi 5 üzerinde hafif, modern, ajan gerektirmeyen ağ izleme (ICMP/TCP/HTTP), web tabanlı admin panel.
+Kısıtlar: React YOK, Bootstrap YOK. Frontend: HTMX + Alpine + Tailwind(CDN) + Chart.js(CDN), minimal JS. Backend: Go + Gin + MySQL (InnoDB). Docker opsiyonel, default: systemd servis.
+
+========================================
+1) Dizin Yerleşimi
+========================================
+/cmd/systrack/main.go                 # server entry
+/internal/config/config.go            # .env yükleme
+/internal/db/mysql.go                 # MySQL bağlantı + sqlc/gorm DEĞİL, sqlx öner
+/internal/db/migrations/              # golang-migrate SQL dosyaları
+/internal/auth/jwt.go                 # JWT üret/Doğrula
+/internal/auth/password.go            # bcrypt
+/internal/mw/authmw.go                # JWT middleware, RBAC guard
+
+/internal/ws/hub.go                   # WebSocket hub (reconnect dostu)
+/
+internal/scheduler/runner.go         # fping batch runner, pacing/staggering
+/internal/scheduler/state.go         # ardışık fail/success sayaçları
+/internal/alerts/manager.go          # OPEN/CLOSE/RECOVERY, throttle
+/internal/handlers/api_*.go          # /api routes (users, targets, pings, alerts, settings, healthz)
+internal/handlers/admin_*.go         # /admin HTML partialları (htmx)
+internal/logs/logger.go              # structured log
+/static/admin/                       # frontend (CDN tabanlı)
+  index.html
+  js/app.js          # router (hash), toast, modal, ws init, theme toggle
+  js/ws.js           # websocket helper (exponential backoff)
+  js/toast.js        # Toast.show({type,msg})
+  js/modal.js        # portal modal open/close + ESC/backdrop
+  js/helpers.js      # qs, debounce, dom utils
+  css/custom.css
+/Makefile
+/.env.example
+/README.md
+/scripts/seed_admin.go (veya küçük CLI)
+/systemd/systrack.service
+
+========================================
+2) .env & Config
+========================================
+.env keys:
+APP_BIND=0.0.0.0
+APP_PORT=8080
+DB_DSN=user:pass@tcp(localhost:3306)/systrack?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci
+ADMIN_EMAIL=admin@systrack.local
+ADMIN_PASSWORD=ChangeMeNow!
+JWT_SECRET=change_this_secret
+PING_BATCH_INTERVAL_SEC=30
+PING_TIMEOUT_MS=1000
+FAIL_OPEN=3
+SUCCESS_CLOSE=2
+RAW_RETENTION_HOURS=48
+
+config.go: .env oku, type-safe struct; eksik varsa fatal logla.
+
+========================================
+3) Veritabanı Şeması (MySQL InnoDB)
+========================================
+/internal/db/migrations/0001_init.sql
+-- users
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  pass_hash VARCHAR(255) NOT NULL,
+  role ENUM('admin','user','viewer') NOT NULL DEFAULT 'admin',
+  limits_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- targets
+CREATE TABLE targets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  address VARCHAR(255) NOT NULL,
+  type ENUM('icmp','tcp','http') NOT NULL DEFAULT 'icmp',
+  port INT NULL,
+  path VARCHAR(255) NULL,
+  interval_sec INT NOT NULL DEFAULT 30,
+  timeout_ms INT NOT NULL DEFAULT 1000,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  tags VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_targets_enabled_type (enabled, type)
+) ENGINE=InnoDB;
+
+-- pings_raw (kısa sakla)
+CREATE TABLE pings_raw (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  target_id INT NOT NULL,
+  ts_ms BIGINT NOT NULL,
+  ok TINYINT(1) NOT NULL,
+  rtt_ms INT NULL,
+  FOREIGN KEY (target_id) REFERENCES targets(id) ON DELETE CASCADE,
+  INDEX idx_pings_target_ts (target_id, ts_ms),
+  INDEX idx_pings_ts (ts_ms)
+) ENGINE=InnoDB;
+
+-- alerts
+CREATE TABLE alerts (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  target_id INT NOT NULL,
+  level ENUM('minor','major') NOT NULL,
+  opened_at DATETIME NOT NULL,
+  closed_at DATETIME NULL,
+  message VARCHAR(255) NULL,
+  status ENUM('open','closed') NOT NULL DEFAULT 'open',
+  FOREIGN KEY (target_id) REFERENCES targets(id) ON DELETE CASCADE,
+  INDEX idx_alerts_target_status (target_id, status),
+  INDEX idx_alerts_opened (opened_at)
+) ENGINE=InnoDB;
+
+-- settings (opsiyonel key-value)
+CREATE TABLE settings (
+  k VARCHAR(64) PRIMARY KEY,
+  v TEXT NOT NULL
+) ENGINE=InnoDB;
+
+========================================
+4) Backend (Go + Gin)
+========================================
+- Server: Gin, CORS açık (iç ağ), gzip.
+- Middleware: authmw (JWT), rbac (role guard).
+- Auth:
+  POST /api/auth/login {email, password} → {token}
+  GET  /api/me → user info
+- Users:
+  GET    /api/users
+  POST   /api/users
+  PUT    /api/users/:id
+  DELETE /api/users/:id
+- Targets:
+  GET    /api/targets
+  POST   /api/targets
+  PUT    /api/targets/:id
+  DELETE /api/targets/:id
+  POST   /api/targets/:id/ping-now
+- Pings:
+  GET /api/pings/:target_id?since_ms=&limit=
+- Alerts:
+  GET /api/alerts?status=&level=&q=&page=
+  POST /api/alerts/:id/close
+- Settings:
+  GET/POST /api/settings (Telegram/SMTP/Webhook tokenları vs.)
+- Health:
+  GET /healthz (SELECT 1 + fping -v check)
+
+- Admin HTML (HTMX partial):
+  GET /admin/dashboard
+  GET /admin/users
+  GET /admin/targets
+  GET /admin/alerts
+  GET /admin/settings
+  GET /admin/partials/target_history?id=
+  GET /admin/partials/user_form?id=
+  GET /admin/partials/target_form?id=
+
+- WebSocket:
+  GET /ws
+  Mesaj tipleri (JSON): {type:"status_update", targetId, status}, {type:"alert_open"|"alert_close", ...}
+
+- Seed Admin:
+  `go run ./scripts/seed_admin.go` → .env’den admin user ekler (varsa skip)
+
+- Logging:
+  JSON line logs (level, ts, msg, ctx); request id middleware.
+
+========================================
+5) Scheduler & Ping (fping batch)
+========================================
+- /internal/scheduler/runner.go:
+  - interval_sec’e göre hedefleri gruplandır.
+  - fping ile batch: tek komutta listeyi pingle (pacing; `-c 1 -t <timeout>`).
+  - Çıktıyı parse et; sonuçları tek writer goroutine ile pings_raw’a bulk insert.
+  - Ardışık fail/success sayaçları (in-memory harita); FAIL_OPEN ve SUCCESS_CLOSE eşikleri ile alert OPEN/CLOSE üret.
+  - Throttle: aynı hedef için kısa sürede tekrar OPEN spam’ini engelle.
+
+- Staggering: farklı grupların start’ını kaydır (hepsi aynı saniyede çalışmasın).
+- Retention job: RAW_RETENTION_HOURS dolan veriyi gecelik purge et.
+
+========================================
+6) Frontend (HTMX + Alpine + Tailwind CDN)
+========================================
+/static/admin/index.html:
+- CDN’ler: Tailwind, HTMX, Alpine, Chart.js
+- Layout: Sidebar (Dashboard, Users, Targets, Alerts, Settings) + Topbar (search, theme toggle, profile) + Main (#view-root).
+- İlk yüklemede:
+  <main id="view-root" hx-get="/admin/dashboard" hx-trigger="load" hx-target="#view-root" hx-swap="innerHTML"></main>
+- Portal kökleri: #modal-root, #toast-root
+
+/ static/admin/js/app.js:
+- Hash router: data-route="/admin/users" linkleri → HTMX ile partial yüklesin.
+- Toast/Modal init; theme (dark/light) localStorage.
+- WebSocket init (ws.js), gelen event’lere göre DOM badge güncelle.
+
+/ static/admin/js/modal.js:
+- body altına modal container oluştur; open(html)/close(); ESC/backdrop kapatma.
+
+/ static/admin/js/toast.js:
+- Toast.show({type, title, msg, timeout}) → sağ üstte küçük kart.
+
+/admin/users partial (serverdan HTML):
+- Üst form: q (search), role (select)
+- Tablo (thead, tbody#users-tbody)
+- “Create User” butonu: hx-get="/admin/partials/user_form" → #modal-root içine; modal.open()
+- Form submit: hx-post="/api/users" → success: listeyi hx-get ile yenile + Toast.success
+
+/admin/targets:
+- Arama + tag filtre; tablo: Name, Address, Type, Interval, Timeout, Status, Actions
+- “History” butonu: hx-get="/admin/partials/target_history?id=.." → modal
+- “Ping now” butonu: hx-post="/api/targets/:id/ping-now" → satırda mini feedback + Toast
+
+/admin/alerts:
+- Filtre (level, status, time range); tablo; “Close” action
+
+/admin/dashboard:
+- Kısa kartlar: Total/Online/Offline/Unknown
+- Son 5 alert listesi
+- Küçük Chart.js örneği (son 1 saat avg RTT)
+
+========================================
+7) Güvenlik
+========================================
+- JWT auth (HS256, secret .env).
+- Parolalar bcrypt.
+- Role guard: admin tam yetki; user kısıtlı; viewer read-only.
+- Rate-limit (basit token bucket) login ve mutasyon endpointlerine.
+- Loglarda hassas veri yok.
+
+========================================
+8) Systemd Servis (Docker’sız default)
+========================================
+/systemd/systrack.service:
+[Unit]
+Description=SysTrack (Beyz System) — Network Monitor
+After=network-online.target
+[Service]
+User=pi
+WorkingDirectory=/opt/systrack
+EnvironmentFile=/opt/systrack/.env
+ExecStart=/opt/systrack/systrack
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target
+
+Kurulum (özet):
+- sudo apt update && sudo apt install -y mariadb-server fping golang
+- MySQL:
+  CREATE DATABASE systrack CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  CREATE USER 'systrack'@'localhost' IDENTIFIED BY 'StrongPass!';
+  GRANT ALL ON systrack.* TO 'systrack'@'localhost'; FLUSH PRIVILEGES;
+- .env doldur; `go build -o systrack ./cmd/systrack`
+- golang-migrate ile `migrate -path internal/db/migrations -database "mysql://systrack:StrongPass!@tcp(localhost:3306)/systrack" up`
+- `go run ./scripts/seed_admin.go`
+- systemd enable/start
+
+========================================
+9) Kabul Kriterleri
+========================================
+- 1000+ hedef / 30s interval ile stabil: ping sonuçları işleniyor, pings_raw büyüyor, retention purge çalışıyor.
+- Dashboard/Users/Targets/Alerts/Settings partial’ları HTMX ile hızlı yükleniyor.
+- Modallar görünür (portal + z-index), ESC/backdrop kapama çalışır.
+- WebSocket ile status/alert live güncellenir (badge/row).
+- /healthz DB + fping ok → 200.
+- Reboot sonrası systemd servis otomatik kalkar, admin login çalışır.
+
+========================================
+10) Notlar
+========================================
+- React/Bootstrap kullanılmayacak.
+- JS minimum tutulacak, CDN ile yükle; bundle yok.
+- Chart.js sadece gerekli grafiklerde kullanılacak.
+- Kod temizliği: lint, gofmt; log’lar JSON tek satır.
+- Geliştirici deneyimi: Makefile hedefleri:
+  make build / make run / make seed / make migrate-up / make migrate-down
+  

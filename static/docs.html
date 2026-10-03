@@ -1,0 +1,546 @@
+﻿<!DOCTYPE html>
+<html lang="tr" >
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysTrack - Dokümantasyon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="/static/admin/css/custom.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #e2e8f0;
+            --muted: #94a3b8;
+            --brand: #3b82f6;
+            --brand-strong: #2563eb;
+            --accent: #f97316;
+            --surface: #111827;
+            --panel: #0b1220;
+            --ring: rgba(59, 130, 246, 0.2);
+        }
+
+        body {
+            font-family: 'Space Grotesk', system-ui, -apple-system, Segoe UI, sans-serif;
+            color: var(--ink);
+            background: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.2), transparent 45%),
+                        radial-gradient(circle at 80% 0%, rgba(14, 116, 144, 0.25), transparent 40%),
+                        #0b1120;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Kanit', sans-serif;
+            letter-spacing: 0.2px;
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(51, 65, 85, 0.6);
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.4);
+        }
+
+        .soft-panel {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .pulse-ring {
+            position: relative;
+        }
+
+        .pulse-ring::after {
+            content: '';
+            position: absolute;
+            inset: -10px;
+            border-radius: 9999px;
+            border: 1px solid var(--ring);
+            animation: pulse 3.6s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.5; }
+            70% { transform: scale(1.15); opacity: 0; }
+            100% { transform: scale(1.15); opacity: 0; }
+        }
+
+        .section-title {
+            position: relative;
+        }
+
+        .section-title::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -10px;
+            width: 80px;
+            height: 4px;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, var(--brand), var(--accent));
+        }
+
+        .chip {
+            border-radius: 9999px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .outline-chip {
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .code-block {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(0px);
+            opacity: 0.6;
+            animation: float 12s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-16px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        .timeline {
+            border-left: 2px dashed rgba(59, 130, 246, 0.25);
+            padding-left: 1.5rem;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.85rem;
+            top: 0.4rem;
+            width: 14px;
+            height: 14px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, var(--brand), var(--accent));
+            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.15);
+        }
+
+        .nav-pill {
+            padding: 8px 14px;
+            border-radius: 9999px;
+            color: #e2e8f0;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .nav-pill:hover {
+            background: rgba(59, 130, 246, 0.16);
+            color: #93c5fd;
+        }
+
+        .hero-card {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(14, 116, 144, 0.2));
+            border: 1px solid rgba(37, 99, 235, 0.35);
+            border-radius: 1.5rem;
+            padding: 1.8rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .metric-card {
+            border-radius: 1rem;
+            padding: 1.2rem;
+            background: var(--surface);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+        }
+
+        .section-card {
+            background: var(--surface);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+            border-radius: 1.25rem;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(14, 116, 144, 0.35);
+            color: #bae6fd;
+        }
+
+        .gradient-divider {
+            height: 2px;
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0), rgba(37, 99, 235, 0.6), rgba(37, 99, 235, 0));
+        }
+
+        .faq-card {
+            background: var(--surface);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+            border-radius: 1rem;
+            padding: 1.4rem;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+        }
+
+        .grid-cta {
+            background: radial-gradient(circle at top, rgba(59, 130, 246, 0.2), rgba(14, 116, 144, 0.15)), #0f172a;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(51, 65, 85, 0.7);
+            padding: 2rem;
+        }
+
+        .accent-border {
+            border-left: 4px solid var(--accent);
+            padding-left: 1rem;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            padding-top: 120px;
+        }
+
+        .fixed-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+
+        .header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .brand-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .brand-logo {
+            height: 44px;
+            width: auto;
+        }
+
+        .header-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 768px) {
+            .nav-pill {
+                padding: 6px 10px;
+                font-size: 0.85rem;
+            }
+
+            .header-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-nav {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="relative overflow-hidden">
+        <span class="floating-shape bg-blue-300" style="width: 220px; height: 220px; top: 16px; right: 16px;"></span>
+        <span class="floating-shape bg-orange-300" style="width: 160px; height: 160px; bottom: 60px; left: -40px; animation-delay: 1.6s;"></span>
+        <span class="floating-shape bg-sky-200" style="width: 140px; height: 140px; top: 40%; right: 10%; animation-delay: 2.2s;"></span>
+
+        <header class="fixed-header">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                <div class="glass rounded-2xl px-6 py-4">
+                    <div class="header-bar">
+                        <a class="brand-stack" href="#overview" aria-label="SysTrack Dokümantasyon">
+                            <div
+                                class="
+                                    bg-white/85 dark:bg-white/87
+                                    rounded-lg
+                                    px-6 py-1.5
+                                    shadow-sm
+                                    ring-1 ring-black/5
+                                    backdrop-blur-sm
+                                    inline-flex
+                                    items-center
+                                    justify-center
+                                "
+                            >
+                                <img
+                                    src="/static/admin/images/systrackbyz.png"
+                                    alt="SysTrack by Z"
+                                    class="h-10 w-auto object-contain select-none scale-[1.45]"
+                                    draggable="false"
+                                >
+                            </div>
+                            <!-- <span class="text-sm muted">Platform Rehberi</span> -->
+                        </a>
+                        <nav class="header-nav">
+                            <a href="#overview" class="nav-pill">Genel Bakış</a>
+                            <a href="#modules" class="nav-pill">Modüller</a>
+                            <a href="#workflows" class="nav-pill">Akışlar</a>
+                            <a href="#faq" class="nav-pill">SSS</a>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <section id="overview" class="hero-grid mb-20">
+                <div class="space-y-6">
+                    <div class="badge">Dokümantasyon • SysTrack</div>
+                    <h2 class="text-4xl sm:text-5xl font-semibold text-slate-100 leading-tight">
+                        Ağınızı görünür kılan, aksiyona dönüştüren izleme deneyimi.
+                    </h2>
+                    <p class="text-lg muted">
+                        SysTrack; hedef, servis, SLA ve bildirim süreçlerini tek merkezde toplar. Bu dokümantasyon, kullanıcıların
+                        paneli hızlıca keşfetmesini, kritik ayarları doğru yapmasını ve API üzerinden otomasyon kurmasını sağlar.
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="chip">Gerçek Zamanlı İzleme</span>
+                        <span class="chip">SLA & Raporlama</span>
+                        <span class="chip">IP Tarayıcı</span>
+                        <span class="chip">Servis Keşfi</span>
+                    </div>
+                </div>
+                <div class="hero-card space-y-6">
+                    <h3 class="text-2xl font-semibold text-slate-100">Hızlı Tanıtım</h3>
+                    <p class="muted">Tek kutuda gelen cihaz ve web paneli ile izleme altyapınızı hızlıca ayağa kaldırın.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="metric-card">
+                            <p class="text-sm text-slate-400">Kurulum</p>
+                            <p class="text-2xl font-semibold text-slate-100">10 dk</p>
+                        </div>
+                        <div class="metric-card">
+                            <p class="text-sm text-slate-400">Hedef Kapasite</p>
+                            <p class="text-2xl font-semibold text-slate-100">+1000</p>
+                        </div>
+                        <div class="metric-card">
+                            <p class="text-sm text-slate-400">Takip</p>
+                            <p class="text-2xl font-semibold text-slate-100">7/24</p>
+                        </div>
+                    </div>
+                    <div class="gradient-divider"></div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="outline-chip">Dashboard</span>
+                        <span class="outline-chip">Hedef Yönetimi</span>
+                        <span class="outline-chip">Bildirim Merkezi</span>
+                        <span class="outline-chip">Raporlama</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="modules" class="mb-20">
+                <div class="flex items-end justify-between flex-wrap gap-4 mb-10">
+                    <div>
+                        <h2 class="text-3xl font-semibold section-title text-slate-100">Modüller ve Yetkinlikler</h2>
+                        <p class="mt-6 muted max-w-2xl">Paneldeki ana modüller, operasyonel akışınızı hızlandıracak şekilde tasarlanmıştır.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <span class="chip">Operasyon</span>
+                        <span class="chip">Görselleştirme</span>
+                        <span class="chip">Otomasyon</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">Dashboard & Sağlık</h3>
+                        <p class="muted">Online/offline hedefler, sistem grafikleri, uyarı yoğunluğu ve genel sağlık göstergeleri.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">Hedef & Servis Yönetimi</h3>
+                        <p class="muted">IP/hostname/URL hedefleri, servis keşfi, kimlik bilgisi yönetimi ve servis geçmişi.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">IP Tarayıcı</h3>
+                        <p class="muted">Subnet tarama, MAC üretici tespiti ve keşfedilen cihazları hedefe dönüştürme.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">Bildirim Merkezi</h3>
+                        <p class="muted">Kural bazlı tetikleme, şablonlar, loglar ve test bildirimleri.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">SLA & Raporlama</h3>
+                        <p class="muted">SLA özetleri, detay raporlar, dışa aktarma ve dönemsel analizler.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">Kullanıcı & Yetki</h3>
+                        <p class="muted">Rol bazlı erişim, modül izinleri ve hesap yönetimi.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">Ağ Ayarları</h3>
+                        <p class="muted">IP tarama varsayılanları, ağ yapılandırması ve cihaz keşif ayarları.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">Sunucu Metrikleri</h3>
+                        <p class="muted">CPU, RAM, disk ve ağ kullanımının grafiksel takibi.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3 class="text-xl font-semibold text-slate-100 mb-2">SSH Terminal</h3>
+                        <p class="muted">Tarayıcı üzerinden güvenli SSH erişimi ile hızlı müdahale.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="workflows" class="mb-20">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="section-card p-8">
+                        <h2 class="text-2xl font-semibold text-slate-100 section-title">Önerilen Akış</h2>
+                        <p class="mt-6 muted">SysTrack ile hızlıca izlemeye başlamak için önerilen adımlar.</p>
+                        <div class="timeline mt-8">
+                            <div class="timeline-item">
+                                <h3 class="text-lg font-semibold text-slate-100">Hedefleri tanımla</h3>
+                                <p class="muted">IP, hostname veya URL gir, etiketlerle gruplandır.</p>
+                            </div>
+                            <div class="timeline-item">
+                                <h3 class="text-lg font-semibold text-slate-100">Servis keşfini çalıştır</h3>
+                                <p class="muted">Hedefe bağlı servisleri otomatik ekle ve doğrula.</p>
+                            </div>
+                            <div class="timeline-item">
+                                <h3 class="text-lg font-semibold text-slate-100">Bildirim kuralları oluştur</h3>
+                                <p class="muted">E-posta ve Telegram kanallarını yapılandır.</p>
+                            </div>
+                            <div class="timeline-item">
+                                <h3 class="text-lg font-semibold text-slate-100">SLA raporlarını izle</h3>
+                                <p class="muted">Süreçleri raporlayıp çıktılar al.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-card p-8">
+                        <h2 class="text-2xl font-semibold text-slate-100 section-title">Bildirim Kanalları</h2>
+                        <p class="mt-6 muted">SysTrack şu an yalnızca E-posta ve Telegram kanallarını destekler.</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+                            <div class="soft-panel rounded-2xl p-5">
+                                <h3 class="text-lg font-semibold text-slate-100 mb-2">E-posta</h3>
+                                <p class="muted">SMTP yapılandırması ile bildirimler otomatik gönderilir.</p>
+                            </div>
+                            <div class="soft-panel rounded-2xl p-5">
+                                <h3 class="text-lg font-semibold text-slate-100 mb-2">Telegram</h3>
+                                <p class="muted">Bot token ile hızlı entegrasyon.</p>
+                            </div>
+                        </div>
+                        <div class="grid-cta mt-8">
+                            <h3 class="text-xl font-semibold text-slate-100">Bildirim sürecini güçlendirin</h3>
+                            <p class="muted mt-2">Kurallar, şablonlar ve test bildirimleri ile operasyonu otomatikleştirin.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="faq" class="mb-20">
+                <div class="flex items-end justify-between flex-wrap gap-4 mb-10">
+                    <div>
+                        <h2 class="text-3xl font-semibold section-title text-slate-100">Sık Sorulan Sorular</h2>
+                        <p class="mt-6 muted">SysTrack ile ilgili hızlı cevaplar.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="faq-card">
+                        <h3 class="text-lg font-semibold text-slate-100 mb-2">Hangi hedefler izlenebilir?</h3>
+                        <p class="muted">IP, hostname veya URL hedefleriyle ICMP, HTTP/HTTPS ve servis kontrolleri yapılır.</p>
+                    </div>
+                    <div class="faq-card">
+                        <h3 class="text-lg font-semibold text-slate-100 mb-2">Bildirim kanalları neler?</h3>
+                        <p class="muted">SysTrack şu an E-posta ve Telegram kanallarını destekler.</p>
+                    </div>
+                    <div class="faq-card">
+                        <h3 class="text-lg font-semibold text-slate-100 mb-2">SLA raporları nasıl hesaplanır?</h3>
+                        <p class="muted">Erişilebilirlik ve seçilen zaman aralığına göre hesaplanır.</p>
+                    </div>
+                    <div class="faq-card">
+                        <h3 class="text-lg font-semibold text-slate-100 mb-2">Servis keşfi ne işe yarar?</h3>
+                        <p class="muted">Hedef üzerindeki servisleri listeler, izleme listesine eklemenizi sağlar.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+            <div class="glass rounded-2xl px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <p class="text-slate-100 font-semibold">SysTrack</p>
+                    <p class="text-sm muted">Sistem İzleme ve Yönetim Platformu</p>
+                </div>
+                <p class="text-sm text-slate-400">© 2026 SysTrack. Tüm hakları saklıdır.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        document.querySelectorAll('a[href^="#"]')?.forEach((link) => {
+            link.addEventListener('click', (event) => {
+                const targetId = link.getAttribute('href');
+                const target = document.querySelector(targetId);
+                if (!target) return;
+                event.preventDefault();
+                const offset = 120;
+                const top = target.getBoundingClientRect().top + window.scrollY - offset;
+                window.scrollTo({ top, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
+
+

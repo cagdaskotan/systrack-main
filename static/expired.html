@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
+    <title>SysTrack - Lisans Süresi Doldu</title>
+    <style>
+        :root {
+            --warning: #d97706;
+            --warning-dark: #b45309;
+            --accent: #fbbf24;
+            --success: #16a34a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(140deg, #1a1005 0%, #2d1f0a 40%, #1a0f05 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(217, 119, 6, 0.15), transparent 70%);
+            top: -250px;
+            right: -250px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.15), transparent 70%);
+            bottom: -200px;
+            left: -200px;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(50px) scale(1.1); }
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(30, 20, 10, 0.95);
+            border-radius: 24px;
+            padding: 48px 40px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(217, 119, 6, 0.3);
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .warning-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            background: rgba(217, 119, 6, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border: 2px solid rgba(217, 119, 6, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 20px rgba(217, 119, 6, 0);
+            }
+        }
+
+        .warning-icon svg {
+            width: 60px;
+            height: 60px;
+            color: var(--warning);
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+            color: var(--accent);
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: rgba(226, 232, 240, 0.8);
+            margin-bottom: 36px;
+            line-height: 1.6;
+        }
+
+        .alert-box {
+            background: rgba(217, 119, 6, 0.1);
+            border: 1px solid rgba(217, 119, 6, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .alert-title {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .alert-text {
+            color: rgba(226, 232, 240, 0.9);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .status-box {
+            background: rgba(15, 15, 15, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .status-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(148, 163, 184, 0.8);
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--warning);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--warning);
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .checking-status {
+            font-size: 14px;
+            color: rgba(148, 163, 184, 0.8);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .support {
+            background: rgba(217, 119, 6, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 13px;
+            color: rgba(226, 232, 240, 0.7);
+            line-height: 1.6;
+        }
+
+        .support strong {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .success-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            background: rgba(22, 163, 74, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(22, 163, 74, 0.4);
+        }
+
+        .success-icon svg {
+            width: 60px;
+            height: 60px;
+            color: var(--success);
+        }
+
+        .redirect-message {
+            font-size: 14px;
+            color: rgba(226, 232, 240, 0.8);
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--warning);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner.success {
+            border-top-color: var(--success);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 36px 28px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .warning-icon {
+                width: 100px;
+                height: 100px;
+            }
+
+            .warning-icon svg {
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Expired State -->
+        <div id="expiredState">
+            <div class="warning-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+
+            <h1>Lisans Süresi Doldu</h1>
+            <p class="subtitle">
+                Bu cihazın lisans süresi dolmuştur.
+                Cihaz erişimi lisans yenilenene kadar askıya alınmıştır.
+            </p>
+
+            <div class="alert-box">
+                <div class="alert-title">Ne Yapmalıyım?</div>
+                <div class="alert-text">
+                    Lisansınızı yenilemek için destek ekibimizle iletişime geçin.
+                    Lisans yenilendikten sonra cihazınız otomatik olarak tekrar aktif olacaktır.
+                </div>
+            </div>
+
+            <div class="status-box">
+                <div class="status-label">Cihaz Durumu</div>
+                <div class="status-value">
+                    <span class="status-dot"></span>
+                    <span>Lisans Süresi Doldu</span>
+                </div>
+            </div>
+
+            <div class="checking-status">
+                <span class="spinner"></span>
+                <span>Lisans durumu kontrol ediliyor...</span>
+            </div>
+
+            <div class="support">
+                <strong>Lisans yenileme için:</strong><br>
+                Destek ekibimizle iletişime geçin.<br>
+                <strong>satis@zsistem.net</strong>
+            </div>
+        </div>
+
+        <!-- Renewed State -->
+        <div id="renewedState" class="hidden">
+            <div class="success-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+
+            <h1 style="color: #4ade80;">Lisans Yenilendi!</h1>
+            <p class="subtitle">
+                Lisansınız başarıyla yenilendi. Ana sayfaya yönlendiriliyorsunuz...
+            </p>
+
+            <div class="redirect-message">
+                <span class="spinner success"></span>
+                <span>Yönlendiriliyor...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CHECK_INTERVAL = 30000; // 30 seconds
+
+        let checkTimer;
+
+        // Check if license has been renewed
+        async function checkExpireStatus() {
+            try {
+                const response = await fetch('/api/block-status');
+
+                if (!response.ok) {
+                    console.error('Failed to check expire status');
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Expire status:', data);
+
+                // If no longer expired, show success and redirect
+                if (!data.expired) {
+                    console.log('License renewed!');
+                    onRenewed();
+                }
+
+            } catch (error) {
+                console.error('Error checking expire status:', error);
+            }
+        }
+
+        function onRenewed() {
+            // Stop checking
+            if (checkTimer) {
+                clearInterval(checkTimer);
+            }
+
+            // Show success state
+            document.getElementById('expiredState').classList.add('hidden');
+            document.getElementById('renewedState').classList.remove('hidden');
+
+            // Redirect to home page after 3 seconds
+            setTimeout(() => {
+                fetch('/', { cache: 'reload' }).finally(() => {
+                    window.location.replace('/');
+                });
+            }, 3000);
+        }
+
+        // Start checking on page load
+        checkExpireStatus();
+        checkTimer = setInterval(checkExpireStatus, CHECK_INTERVAL);
+    </script>
+</body>
+</html>

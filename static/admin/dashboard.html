@@ -1,0 +1,221 @@
+<div class="space-y-6">
+  <!-- Dashboard Header -->
+  <div class="flex items-center space-x-4 mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+      <p class="text-gray-600 dark:text-gray-400">Sistem durumu ve istatistikler</p>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-stat-card="total-targets">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+          <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Toplam Hedef</p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100 stat-value">0</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-stat-card="online-targets">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
+          <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Online</p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100 stat-value">0</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-stat-card="offline-targets">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-red-100 dark:bg-red-900">
+          <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Offline</p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100 stat-value">0</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 relative group cursor-default" data-stat-card="open-alerts">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900">
+          <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Açık Uyarı</p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100 stat-value">0</p>
+        </div>
+      </div>
+      <!-- Hover tooltip -->
+      <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
+        <div class="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="inline-block w-2 h-2 rounded-full bg-red-400"></span>
+            Bilinmeyen IP Tespitleri: <span class="font-semibold" data-alert-detail="ip">0</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-purple-400"></span>
+            Servis Uyarıları: <span class="font-semibold" data-alert-detail="service">0</span>
+          </div>
+          <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-stat-card="avg-uptime">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900">
+          <svg class="h-6 w-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Ortalama Uptime</p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100 stat-value">0.0%</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sistem Sağlığı & Hedef Durumları -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+    <!-- Sistem Sağlığı -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Sistem Sağlığı</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            Genel sistem sağlığı ve servis bazlı başarı oranları.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-col lg:flex-row items-center justify-center gap-6">
+        <!-- Chart -->
+        <div class="w-full lg:w-1/2">
+          <div class="h-64 lg:h-[300px]">
+            <canvas id="systemHealthChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Donut & Metinler -->
+        <div class="w-full lg:w-1/2 flex flex-col items-center justify-center text-center">
+          <div class="relative h-40 w-40 sm:h-48 sm:w-48">
+            <svg class="h-full w-full" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="80" fill="none" stroke-width="20" class="stroke-gray-200 dark:stroke-gray-700" />
+              <circle cx="100" cy="100" r="80" fill="none" stroke-width="20" stroke="#22c55e"
+                      stroke-linecap="round"
+                      transform="rotate(-90 100 100)"
+                      style="stroke-dasharray: 502; stroke-dashoffset: 0; transition: stroke-dashoffset 1s ease-out;"
+                      data-overall-health-ring="true"
+                      data-ring-circumference="502" />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-3xl sm:text-4xl font-bold text-green-500" data-overall-health-score>--%</span>
+              <span class="text-xs sm:text-base font-semibold text-gray-500 dark:text-gray-400 mt-1">Sistem Sağlığı</span>
+            </div>
+          </div>
+          <h4 class="text-lg sm:text-xl font-bold mt-4 text-green-500" data-overall-health-label>Mükemmel</h4>
+          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 px-2 sm:px-4" data-overall-health-description>
+            Sistem verileri yükleniyor...
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hedef Durumları -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Hedef Durumları</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        Anlık online/offline dağılımını takip edin.
+      </p>
+      <div class="h-[260px] sm:h-[320px]">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Online/Offline Hedefler -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+    <!-- Online Hedefler -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border-2 border-green-200 dark:border-green-800">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="p-2 bg-green-500 rounded-lg">
+              <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">Online Hedefler</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Toplam: 0 hedef</p>
+            </div>
+          </div>
+          <button
+            @click="navigateTo('targets', {status: 'online'})"
+            class="px-3 py-1.5 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors flex items-center space-x-1">
+            <span>Tümünü Gör</span>
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 max-h-[500px] overflow-y-auto" id="online-targets-container">
+        <div id="online-targets-list">
+          <p class="text-gray-500 dark:text-gray-400 text-center py-4">Veri yükleniyor...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Offline Hedefler -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border-2 border-red-200 dark:border-red-800">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="p-2 bg-red-500 rounded-lg">
+              <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">Offline Hedefler</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Toplam: 0 hedef</p>
+            </div>
+          </div>
+          <button
+            @click="navigateTo('targets', {status: 'offline'})"
+            class="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center space-x-1">
+            <span>Tümünü Gör</span>
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 max-h-[500px] overflow-y-auto" id="offline-targets-container">
+        <div id="offline-targets-list">
+          <p class="text-gray-500 dark:text-gray-400 text-center py-4">Veri yükleniyor...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

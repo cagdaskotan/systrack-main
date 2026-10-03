@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysTrack - Cihaz Engellendi</title>
+    <style>
+        :root {
+            --danger: #dc2626;
+            --danger-dark: #b91c1c;
+            --accent: #f87171;
+            --success: #16a34a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(140deg, #1a0a0a 0%, #2d1010 40%, #1a0505 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.15), transparent 70%);
+            top: -250px;
+            right: -250px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(248, 113, 113, 0.15), transparent 70%);
+            bottom: -200px;
+            left: -200px;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(50px) scale(1.1); }
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(30, 15, 15, 0.95);
+            border-radius: 24px;
+            padding: 48px 40px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .warning-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            background: rgba(220, 38, 38, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border: 2px solid rgba(220, 38, 38, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 20px rgba(220, 38, 38, 0);
+            }
+        }
+
+        .warning-icon svg {
+            width: 60px;
+            height: 60px;
+            color: var(--danger);
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+            color: var(--accent);
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: rgba(226, 232, 240, 0.8);
+            margin-bottom: 36px;
+            line-height: 1.6;
+        }
+
+        .alert-box {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .alert-title {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .alert-text {
+            color: rgba(226, 232, 240, 0.9);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .status-box {
+            background: rgba(15, 15, 15, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .status-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(148, 163, 184, 0.8);
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--danger);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .checking-status {
+            font-size: 14px;
+            color: rgba(148, 163, 184, 0.8);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .support {
+            background: rgba(220, 38, 38, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 13px;
+            color: rgba(226, 232, 240, 0.7);
+            line-height: 1.6;
+        }
+
+        .support strong {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .success-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            background: rgba(22, 163, 74, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(22, 163, 74, 0.4);
+        }
+
+        .success-icon svg {
+            width: 60px;
+            height: 60px;
+            color: var(--success);
+        }
+
+        .redirect-message {
+            font-size: 14px;
+            color: rgba(226, 232, 240, 0.8);
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--danger);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner.success {
+            border-top-color: var(--success);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 36px 28px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .warning-icon {
+                width: 100px;
+                height: 100px;
+            }
+
+            .warning-icon svg {
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Blocked State -->
+        <div id="blockedState">
+            <div class="warning-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+
+            <h1>Cihaz Kopyalama Tehdidi Tespit Edildi</h1>
+            <p class="subtitle">
+                Sistemimiz bu cihazda yetkisiz kopyalama girişimi tespit etti.
+                Cihaz erişimi geçici olarak engellenmiştir.
+            </p>
+
+            <div class="alert-box">
+                <div class="alert-title">Ne Oldu?</div>
+                <div class="alert-text">
+                    Bu cihazın yazılımı, kayıtlı donanımdan farklı bir donanımda çalıştırılmaya çalışıldı.
+                    Güvenlik protokollerimiz gereği cihaz erişimi otomatik olarak engellendi.
+                </div>
+            </div>
+
+            <div class="status-box">
+                <div class="status-label">Cihaz Durumu</div>
+                <div class="status-value">
+                    <span class="status-dot"></span>
+                    <span>Erişim Engellendi</span>
+                </div>
+            </div>
+
+            <div class="checking-status">
+                <span class="spinner"></span>
+                <span>Engel durumu kontrol ediliyor...</span>
+            </div>
+
+            <div class="support">
+                <strong>Bu bir hata olabilir mi?</strong><br>
+                Raspberry Pi cihazınız değiştirildiyse veya teknik bir sorun yaşıyorsanız,
+                lütfen destek ekibimizle iletişime geçin:<br>
+                <strong>satis@zsistem.net</strong>
+            </div>
+        </div>
+
+        <!-- Unblocked State -->
+        <div id="unblockedState" class="hidden">
+            <div class="success-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+
+            <h1 style="color: #4ade80;">Engel Kaldırıldı!</h1>
+            <p class="subtitle">
+                Cihaz erişiminiz yeniden aktif edildi. Ana sayfaya yönlendiriliyorsunuz...
+            </p>
+
+            <div class="redirect-message">
+                <span class="spinner success"></span>
+                <span>Yönlendiriliyor...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CHECK_INTERVAL = 30000; // 30 seconds
+
+        let checkTimer;
+
+        // Check if device is still blocked
+        async function checkBlockStatus() {
+            try {
+                const response = await fetch('/api/block-status');
+
+                if (!response.ok) {
+                    console.error('Failed to check block status');
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Block status:', data);
+
+                // If no longer blocked, show success and redirect
+                if (!data.blocked) {
+                    console.log('Device unblocked!');
+                    onUnblocked();
+                }
+
+            } catch (error) {
+                console.error('Error checking block status:', error);
+            }
+        }
+
+        function onUnblocked() {
+            // Stop checking
+            if (checkTimer) {
+                clearInterval(checkTimer);
+            }
+
+            // Show success state
+            document.getElementById('blockedState').classList.add('hidden');
+            document.getElementById('unblockedState').classList.remove('hidden');
+
+            // Redirect to home page after 3 seconds
+            setTimeout(() => {
+                fetch('/', { cache: 'reload' }).finally(() => {
+                    window.location.replace('/');
+                });
+            }, 3000);
+        }
+
+        // Start checking on page load
+        checkBlockStatus();
+        checkTimer = setInterval(checkBlockStatus, CHECK_INTERVAL);
+    </script>
+</body>
+</html>

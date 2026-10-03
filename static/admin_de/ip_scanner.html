@@ -1,0 +1,693 @@
+<div class="space-y-8 max-w-full overflow-hidden" x-data="ipScannerApp()" x-init="init()" x-cloak>
+    <!-- Header & Buttons -->
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm px-4 sm:px-6 pb-6 pt-4">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">IP-Scanner</h1>
+                <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+                    Geräte im selben Subnetz automatisch scannen und IP- sowie Host-Informationen auflisten.
+                </p>
+            </div>
+            <div class="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+                <button type="button"
+                        class="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-200/70 dark:hover:bg-gray-700/70 whitespace-nowrap"
+                        @click="openSettingsModal">
+                    <span class="fas fa-sliders-h mr-2"></span>
+                    Einstellungen
+                </button>
+                <button type="button"
+                        class="inline-flex items-center justify-center px-5 py-2 rounded-xl text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 shadow disabled:opacity-60 whitespace-nowrap"
+                        @click="runScan"
+                        :disabled="loading">
+                    <span class="fas fa-bolt mr-2"></span>
+                    Scannen
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div class="bg-gray-50 dark:bg-gray-900/30 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Schnittstelle</p>
+                <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100" x-text="interfaceLabel()"></p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900/30 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Zielbereich</p>
+                <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100" x-text="currentScopeLabel()"></p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900/30 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Scanprofil</p>
+                <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100" x-text="scanProfile()"></p>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <template x-if="error">
+            <div class="mt-4 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-200 px-4 py-3 text-sm flex items-center">
+                <span class="fas fa-exclamation-triangle mr-2"></span>
+                <span x-text="error"></span>
+            </div>
+        </template>
+    </div>
+
+    <!-- Stats Cards -->
+    <template x-if="stats">
+        <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 sm:p-5">
+                <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Subnetz</p>
+                <p class="mt-2 text-lg sm:text-xl font-semibold text-gray-900 dark:text-white" x-text="stats.subnet"></p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 sm:p-5">
+                <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Erreichbar</p>
+                <p class="mt-2 text-2xl sm:text-3xl font-semibold text-emerald-600" x-text="stats.reachable"></p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 sm:p-5">
+                <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Dauer</p>
+                <p class="mt-2 text-2xl sm:text-3xl font-semibold text-blue-600" x-text="(stats.durationMs / 1000).toFixed(1) + ' s'"></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" x-text="formattedGeneratedAt()"></p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+                <p class="text-xs uppercase text-gray-500 dark:text-gray-400">Exportieren</p>
+                <button type="button"
+                        class="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        @click="downloadJSON">
+                    <span class="fas fa-download mr-2"></span>
+                    JSON herunterladen
+                </button>
+            </div>
+        </section>
+    </template>
+
+    <!-- Scan Results -->
+    <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm max-w-full overflow-hidden">
+        <!-- Header & Actions -->
+        <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <!-- Left: title + (mobile) select-all -->
+            <div class="flex items-start gap-3">
+                <!-- Mobile select-all checkbox -->
+                <div class="mt-1 md:hidden" x-show="devices.length">
+                    <input type="checkbox"
+                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                           @change="toggleSelectAll($event)"
+                           :checked="devices.length && selectedDevices.length === devices.length">
+                </div>
+
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Scan-Ergebnisse</h2>
+                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400" x-show="stats">
+                        <span x-text="devices.length"></span> Einträge werden angezeigt.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right: buttons & loading info -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400" x-show="selectedDevices.length">
+                    <span x-text="selectedDevices.length"></span> IP ausgewählt
+                </div>
+                <button type="button"
+                        x-show="window.canEditModule && window.canEditModule('ip_scanner')"
+                        class="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        @click="openSnmpTestModal()"
+                        :disabled="!selectedDevices.length || loading">
+                    <span class="fas fa-network-wired mr-2"></span>
+                    SNMP-Test
+                </button>
+                <button type="button"
+                        x-show="window.canEditModule && window.canEditModule('ip_scanner')"
+                        class="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        @click="openAddTargetsModal"
+                        :disabled="!selectedDevices.length || loading">
+                    <span class="fas fa-plus mr-2"></span>
+                    Ziele hinzufügen
+                </button>
+                <div class="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400" x-show="loading">
+                    <span class="inline-flex h-4 w-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mr-2"></span>
+                    Scan läuft, bitte warten ...
+                </div>
+            </div>
+        </div>
+
+        <!-- Desktop Table (md and up) -->
+        <div class="hidden md:block w-full overflow-x-auto">
+            <div class="inline-block min-w-full align-middle">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900/40">
+                        <tr>
+                            <th class="w-px px-2 py-3 text-center">
+                                <input type="checkbox"
+                                       class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                       @change="toggleSelectAll($event)"
+                                       :checked="devices.length && selectedDevices.length === devices.length">
+                            </th>
+                            <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">
+                                IP
+                            </th>
+                            <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">
+                                Name
+                            </th>
+                            <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">
+                                MAC-Adresse
+                            </th>
+                            <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">
+                                Hersteller
+                            </th>
+                            <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">
+                                Status
+                            </th>
+                            <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">
+                                Latenz
+                            </th>
+                            <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">
+                                Quelle
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800" x-show="devices.length">
+                        <template x-for="device in devices" :key="device.ip + '-desktop'">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                                <td class="w-px px-2 py-4 text-center">
+                                    <input type="checkbox"
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                           :value="device.ip"
+                                           :checked="isDeviceSelected(device.ip)"
+                                           @change="toggleDevice(device)">
+                                </td>
+                                <td class="px-4 lg:px-6 py-4 text-sm font-mono text-gray-900 dark:text-gray-100" x-text="device.ip"></td>
+                                <td class="px-4 lg:px-6 py-4 text-sm text-gray-700 dark:text-gray-300" x-text="device.hostname || '-'"></td>
+                                <td class="px-4 lg:px-6 py-4 text-xs font-mono text-gray-600 dark:text-gray-400" x-text="device.mac_address || '-'"></td>
+                                <td class="px-4 lg:px-6 py-4 text-sm text-gray-700 dark:text-gray-300" x-text="device.vendor || '-'"></td>
+                                <td class="px-4 lg:px-6 py-4">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                          :class="device.reachable ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300'"
+                                          x-text="device.reachable ? 'Erreichbar' : 'Keine Antwort'"></span>
+                                </td>
+                                <td class="px-4 lg:px-6 py-4 text-sm text-gray-700 dark:text-gray-300" x-text="device.latency_ms > 0 ? device.latency_ms + ' ms' : '-'"></td>
+                                <td class="px-4 lg:px-6 py-4 text-xs text-gray-500 dark:text-gray-400" x-text="device.interface_name || device.probe_method || '-'"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Mobile List (below md) -->
+        <div class="md:hidden px-4 py-4">
+            <div class="space-y-3" x-show="devices.length">
+                <template x-for="device in devices" :key="device.ip + '-mobile'">
+                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                        <!-- Oberer Bereich: Checkbox + IP/Hostname + Status Badge -->
+                        <div class="flex items-start gap-3 mb-3">
+                            <input type="checkbox"
+                                   class="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500 flex-shrink-0"
+                                   :value="device.ip"
+                                   :checked="isDeviceSelected(device.ip)"
+                                   @change="toggleDevice(device)">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100 truncate" x-text="device.ip"></h4>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" x-text="device.hostname || 'Hostname nicht gefunden'"></p>
+                            </div>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap flex-shrink-0"
+                                  :class="device.reachable ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300'"
+                                  x-text="device.reachable ? 'Erreichbar' : 'Keine Antwort'"></span>
+                        </div>
+
+                        <!-- Informationen -->
+                        <div class="space-y-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-gray-500 dark:text-gray-400">MAC-Adresse:</span>
+                                <span class="font-medium font-mono text-gray-700 dark:text-gray-200" x-text="device.mac_address || '-'"></span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-gray-500 dark:text-gray-400">Hersteller:</span>
+                                <span class="font-medium text-gray-700 dark:text-gray-200" x-text="device.vendor || '-'"></span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-gray-500 dark:text-gray-400">Latenz:</span>
+                                <span class="font-medium text-gray-700 dark:text-gray-200" x-text="device.latency_ms > 0 ? device.latency_ms + ' ms' : '-'"></span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-gray-500 dark:text-gray-400">Quelle:</span>
+                                <span class="font-medium text-gray-700 dark:text-gray-200" x-text="device.interface_name || device.probe_method || '-'"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Empty state -->
+        <div x-show="!devices.length && !loading" class="px-4 sm:px-6 py-8 sm:py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+            Es wurde noch kein Scan ausgeführt.
+        </div>
+    </section>
+
+    <!-- Add Selected Addresses as Targets Modal -->
+    <div
+      x-show="showAddTargetModal"
+      x-cloak
+      class="fixed inset-0 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-targets-title"
+      @keydown.escape.window="closeAddTargetsModal"
+    >
+      <!-- Overlay -->
+      <div
+        class="fixed inset-0 bg-black/60"
+        x-transition.opacity
+        @click="closeAddTargetsModal"
+      ></div>
+
+      <!-- Dialog container -->
+      <div class="fixed inset-0 flex items-center justify-center p-4">
+        <!-- Panel -->
+        <div
+          class="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl"
+          x-transition:enter="ease-out duration-150"
+          x-transition:enter-start="opacity-0 scale-95"
+          x-transition:enter-end="opacity-100 scale-100"
+          x-transition:leave="ease-in duration-100"
+          x-transition:leave-start="opacity-100 scale-100"
+          x-transition:leave-end="opacity-0 scale-95"
+          @click.stop
+        >
+          <!-- Header -->
+          <div class="flex items-start justify-between gap-3 px-4 sm:px-6 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700">
+            <div>
+              <h3 id="add-targets-title" class="text-lg font-semibold text-gray-900 dark:text-white">
+                Ausgewählte Adressen als Ziele hinzufügen
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <span class="font-medium text-gray-900 dark:text-gray-100" x-text="selectedDevices.length"></span> IP-Adressen werden hinzugefügt.
+                Wenn kein Hostname vorhanden ist, wird die IP als Name verwendet.
+              </p>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="px-4 sm:px-6 py-5 space-y-5 flex-1 overflow-y-auto">
+            <div>
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Labels (optional)</label>
+              <input
+                type="text" placeholder="z.B. netzwerk,büro"
+                x-model="targetForm.tags"
+                class="mt-1 w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                       focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 px-3 py-2"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Du kannst mehrere Labels durch Kommas trennen.</p>
+            </div>
+
+            <template x-if="targetFormError">
+              <div class="rounded-lg bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-200 px-3 py-2 text-sm" x-text="targetFormError"></div>
+            </template>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-4 sm:px-6 pb-5 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3">
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700
+                     disabled:opacity-60 disabled:cursor-not-allowed"
+              @click="closeAddTargetsModal"
+              :disabled="submittingTargets"
+            >Abbrechen</button>
+
+            <button
+              type="button"
+              class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 shadow-sm
+                     focus:outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center"
+              @click="submitTargets"
+              :disabled="submittingTargets"
+            >
+              <span x-show="!submittingTargets">Ziele erstellen</span>
+              <span x-show="submittingTargets" class="ml-2 inline-flex h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SNMP Test Modal -->
+    <div
+        x-show="showSnmpTestModal"
+        x-cloak
+        class="fixed inset-0 z-50"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="snmp-test-title"
+        @keydown.escape.window="closeSnmpTestModal">
+        <!-- Overlay -->
+        <div
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            x-transition.opacity
+            @click="closeSnmpTestModal"
+        ></div>
+
+        <!-- Dialog container -->
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div
+                class="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl"
+                x-transition:enter="ease-out duration-150"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="ease-in duration-100"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                @click.stop
+            >
+            <!-- Header -->
+            <div class="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h3 id="snmp-test-title" class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">SNMP-Testergebnisse</h3>
+                <button
+                    type="button"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    @click="closeSnmpTestModal">
+                    <span class="fas fa-times text-xl"></span>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="px-4 sm:px-6 py-4">
+                <!-- Progress -->
+                <template x-if="snmpTestInProgress">
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-2">
+                            <span>Test läuft...</span>
+                            <span x-text="snmpTestProgress + ' / ' + snmpTestTotal"></span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                 :style="'width: ' + (snmpTestTotal > 0 ? (snmpTestProgress / snmpTestTotal * 100) : 0) + '%'"></div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Community String Configuration -->
+                <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Community String
+                        </label>
+                        <input
+                            type="text"
+                            x-model="snmpCommunity"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            placeholder="public">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            SNMP-Version
+                        </label>
+                        <select
+                            x-model="snmpVersion"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                            <option value="v2c">v2c</option>
+                            <option value="v1">v1</option>
+                            <option value="v3">v3</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Results Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-900/40">
+                            <tr>
+                                <th class="px-3 py-3 text-left">
+                                    <input
+                                        type="checkbox"
+                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        @change="toggleSelectAllSnmpResults($event)"
+                                        :checked="snmpTestResults.length && selectedSnmpResults.length === snmpTestResults.filter(r => r.accessible).length">
+                                </th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">IP</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Hostname</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Status</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Geräteinfo</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <template x-for="result in snmpTestResults" :key="result.target_id">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td class="px-3 py-3">
+                                        <input
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            :value="result.target_id"
+                                            x-model="selectedSnmpResults"
+                                            :disabled="!result.accessible">
+                                    </td>
+                                    <td class="px-3 py-3 text-sm text-gray-900 dark:text-white" x-text="result.ip"></td>
+                                    <td class="px-3 py-3 text-sm text-gray-600 dark:text-gray-300" x-text="result.name"></td>
+                                    <td class="px-3 py-3">
+                                        <span x-show="result.accessible" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                                            <span class="fas fa-check mr-1"></span>
+                                            SNMP OK
+                                        </span>
+                                        <span x-show="!result.accessible" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                                            <span class="fas fa-times mr-1"></span>
+                                            Nicht erreichbar
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <span x-show="result.accessible" class="text-sm text-gray-600 dark:text-gray-300" x-text="result.sys_descr || '-'"></span>
+                                        <span x-show="!result.accessible" class="text-xs text-gray-500 dark:text-gray-400" x-text="result.error_msg"></span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <template x-if="!snmpTestResults.length && !snmpTestInProgress">
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <span class="fas fa-network-wired text-4xl mb-3 block"></span>
+                        <p>Klicke auf &quot;Testen&quot;, um den SNMP-Test zu starten</p>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-4 sm:px-6 pb-5 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                <div class="text-sm text-gray-600 dark:text-gray-300">
+                    <span x-show="snmpTestResults.length">
+                        <span x-text="snmpTestResults.filter(r => r.accessible).length"></span> / <span x-text="snmpTestResults.length"></span> Geräte erreichbar
+                    </span>
+                </div>
+                <div class="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+                    <button
+                        type="button"
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60"
+                        @click="closeSnmpTestModal"
+                        :disabled="snmpTestInProgress">
+                        Schließen
+                    </button>
+                    <button
+                        type="button"
+                        class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm disabled:opacity-60"
+                        @click="runSnmpTest"
+                        :disabled="snmpTestInProgress || !selectedDevices.length">
+                        <span class="fas fa-bolt mr-2"></span>
+                        Testen
+                    </button>
+                    <!-- <button
+                        type="button"
+                        class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm disabled:opacity-60"
+                        @click="enableMetricsForSelected"
+                        :disabled="snmpTestInProgress || !selectedSnmpResults.length">
+                        <span class="fas fa-check mr-2"></span>
+                        Ausgewählte aktivieren
+                    </button> -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Settings Modal -->
+    <div
+        x-show="showSettingsModal"
+        x-cloak
+        class="fixed inset-0 z-50"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="scan-settings-title"
+        @keydown.escape.window="closeSettingsModal"
+    >
+        <!-- Overlay -->
+        <div
+            class="fixed inset-0 bg-black/60"
+            x-transition.opacity
+            @click="closeSettingsModal"
+        ></div>
+
+        <!-- Dialog container -->
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <!-- Panel -->
+            <div
+              class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl"
+              x-transition:enter="ease-out duration-150"
+              x-transition:enter-start="opacity-0 scale-95"
+              x-transition:enter-end="opacity-100 scale-100"
+              x-transition:leave="ease-in duration-100"
+              x-transition:leave-start="opacity-100 scale-100"
+              x-transition:leave-end="opacity-0 scale-95"
+              @click.stop
+            >
+              <!-- Header -->
+              <div class="flex items-start justify-between gap-3 px-4 sm:px-6 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700">
+                  <div>
+                    <h3 id="scan-settings-title" class="text-lg font-semibold text-gray-900 dark:text-white">
+                        Scan-Einstellungen
+                    </h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Subnetz- und Scan-Parameter anpassen.</p>
+                  </div>
+              </div>
+
+              <!-- Body -->
+              <div class="px-4 sm:px-6 py-5 space-y-6 flex-1 overflow-y-auto">
+                  <div class="flex flex-wrap gap-3 sm:gap-4">
+                      <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <input type="radio" value="range" x-model="settingsForm.mode"
+                                 class="text-primary-600 border-gray-300 focus:ring-primary-500">
+                          Nach IP-Bereich scannen
+                      </label>
+                      <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <input type="radio" value="cidr" x-model="settingsForm.mode"
+                                 class="text-primary-600 border-gray-300 focus:ring-primary-500">
+                          Nach CIDR scannen
+                      </label>
+                  </div>
+
+                  <template x-if="settingsForm.mode === 'cidr'">
+                      <div>
+                          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Subnetz (CIDR)</label>
+                          <input
+                              type="text"
+                              placeholder="192.168.1.0/24"
+                              x-model.trim="settingsForm.subnet"
+                              class="mt-1 w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 px-3 py-2"
+                          />
+                      </div>
+                  </template>
+
+                  <template x-if="settingsForm.mode === 'range'">
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Start-IP</label>
+                              <input
+                                  type="text"
+                                  placeholder="192.168.x.x"
+                                  x-model.trim="settingsForm.rangeStart"
+                                  class="mt-1 w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                      focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 px-3 py-2"
+                              />
+                          </div>
+                          <div>
+                              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">End-IP</label>
+                              <input
+                                  type="text"
+                                  placeholder="192.168.x.x"
+                                  x-model.trim="settingsForm.rangeEnd"
+                                  class="mt-1 w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                      focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 px-3 py-2"
+                              />
+                          </div>
+                      </div>
+                  </template>
+
+                  <!-- Grid inputs -->
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Timeout (ms)</label>
+                        <input
+                          type="number" min="200" max="5000" step="50"
+                          x-model.number="settingsForm.timeoutMs"
+                          class="mt-1 w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 px-3 py-2"
+                        />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Empfohlen: 1000–3000</p>
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Worker</label>
+                        <input
+                          type="number" min="1" max="128"
+                          x-model.number="settingsForm.workerCount"
+                          class="mt-1 w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 px-3 py-2"
+                        />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Mehr Worker = schneller, mehr CPU-Auslastung.</p>
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">IP-Limit</label>
+                        <input
+                          type="number" min="16" max="4096" step="16"
+                          x-model.number="settingsForm.maxHosts"
+                          class="mt-1 w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 px-3 py-2"
+                        />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Ein sinnvolles Oberlimit für große Subnetze.</p>
+                    </div>
+                  </div>
+
+                  <div>
+                      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Ports (optional)</label>
+                      <input
+                          type="text"
+                          placeholder="z.B. 22,80,443"
+                          x-model.trim="settingsForm.ports"
+                          class="mt-1 w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                              focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 px-3 py-2"
+                      />
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          Du kannst mehrere Ports durch Kommas trennen. Es werden nur IPs aufgelistet, bei denen mindestens einer dieser Ports offen ist.
+                      </p>
+                  </div>
+
+                  <!-- Toggle -->
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Inaktive IPs anzeigen</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Nicht erreichbare Adressen in die Liste aufnehmen.</p>
+                    </div>
+                    <label class="inline-flex items-center cursor-pointer self-start sm:self-auto">
+                        <input type="checkbox" class="sr-only" x-model="settingsForm.includeUnreachable">
+                        <span class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+                            :class="settingsForm.includeUnreachable ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'">
+                          <span class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+                                :class="settingsForm.includeUnreachable ? 'translate-x-5' : 'translate-x-1'"></span>
+                        </span>
+                    </label>
+                  </div>
+
+                  <!-- Error -->
+                  <template x-if="settingsFormError">
+                    <div class="rounded-lg bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-200 px-3 py-2 text-sm" x-text="settingsFormError"></div>
+                  </template>
+              </div>
+
+              <!-- Footer -->
+              <div class="px-4 sm:px-6 pb-5 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700
+                            disabled:opacity-60 disabled:cursor-not-allowed"
+                    @click="closeSettingsModal"
+                  >Abbrechen</button>
+
+                  <button
+                    type="button"
+                    class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 shadow-sm
+                            focus:outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-60 disabled:cursor-not-allowed"
+                    @click="saveSettings"
+                  >Speichern</button>
+              </div>
+            </div>
+        </div>
+    </div>
+</div>

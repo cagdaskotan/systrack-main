@@ -1,0 +1,730 @@
+<!-- Notification Preferences Page -->
+<div class="notification-preferences-container" x-data="notificationPreferencesApp()">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Bildirim Tercihleri</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Hangi bildirimleri hangi kanallardan almak istediğinizi ayarlayın</p>
+        </div>
+        <div class="flex space-x-3">
+            <button @click="savePreferences()" 
+                    :disabled="loading"
+                    class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                <span x-show="!loading">Kaydet</span>
+                <span x-show="loading">Kaydediliyor...</span>
+            </button>
+            <button @click="loadPreferences()" 
+                    :disabled="loading"
+                    class="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                Yenile
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification Rules Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Bildirim Kuralları</h2>
+            <button @click="showCreateRuleModal = true" 
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                Yeni Kural Ekle
+            </button>
+        </div>
+
+        <!-- Rules Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                    <tr>
+                        <th class="px-4 py-3">Kural Adı</th>
+                        <th class="px-4 py-3">Tür</th>
+                        <th class="px-4 py-3">Kanal</th>
+                        <th class="px-4 py-3">Öncelik</th>
+                        <th class="px-4 py-3">Durum</th>
+                        <th class="px-4 py-3">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="rule in rules" :key="rule.id">
+                        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white" x-text="rule.name"></td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs rounded-full" 
+                                      :class="getTypeBadgeClass(rule.type)" 
+                                      x-text="getTypeLabel(rule.type)"></span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs rounded-full" 
+                                      :class="getChannelBadgeClass(rule.channel)" 
+                                      x-text="getChannelLabel(rule.channel)"></span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs rounded-full" 
+                                      :class="getPriorityBadgeClass(rule.priority)" 
+                                      x-text="getPriorityLabel(rule.priority)"></span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs rounded-full" 
+                                      :class="rule.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                      x-text="rule.is_active ? 'Aktif' : 'Pasif'"></span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex space-x-2">
+                                    <button @click="editRule(rule)" 
+                                            class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                        Düzenle
+                                    </button>
+                                    <button @click="deleteRule(rule.id)" 
+                                            class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                        Sil
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- User Preferences Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Kanal Tercihleri</h2>
+        
+        <!-- Channel Preferences -->
+        <div class="space-y-6">
+            <template x-for="channel in channels" :key="channel">
+                <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                                 :class="getChannelIconClass(channel)">
+                                <i :class="getChannelIcon(channel)"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100" 
+                                x-text="getChannelLabel(channel)"></h3>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" 
+                                   :checked="getChannelPreference(channel)?.is_enabled || false"
+                                   @change="toggleChannel(channel, $event.target.checked)"
+                                   class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <div x-show="getChannelPreference(channel)?.is_enabled" class="space-y-4">
+                        <!-- Recipient -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Alıcı Adresi
+                            </label>
+                            <input type="text" 
+                                   :value="getChannelPreference(channel)?.recipient || ''"
+                                   @input="updateChannelPreference(channel, 'recipient', $event.target.value)"
+                                   :placeholder="getChannelPlaceholder(channel)"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <!-- Notification Types -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Bildirim Türleri
+                            </label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <template x-for="type in notificationTypes" :key="type">
+                                    <label class="flex items-center space-x-2">
+                                        <input type="checkbox" 
+                                               :checked="isNotificationTypeEnabled(channel, type)"
+                                               @change="toggleNotificationType(channel, type, $event.target.checked)"
+                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300" 
+                                              x-text="getTypeLabel(type)"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Priority -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Minimum Öncelik
+                            </label>
+                            <select :value="getChannelPreference(channel)?.priority || 'medium'"
+                                    @change="updateChannelPreference(channel, 'priority', $event.target.value)"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="low">Düşük</option>
+                                <option value="medium">Orta</option>
+                                <option value="high">Yüksek</option>
+                                <option value="critical">Kritik</option>
+                            </select>
+                        </div>
+
+                        <!-- Target Tags -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Hedef Tag'leri (Boş bırakırsanız tüm tag'ler için bildirim alırsınız)
+                            </label>
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                <template x-for="tag in availableTags" :key="tag">
+                                    <label class="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                                        <input type="checkbox" 
+                                               :checked="isTagIncluded(channel, tag)"
+                                               @change="toggleTag(channel, 'target_tags', tag, $event.target.checked)"
+                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300" x-text="tag"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                Dahil edilen tag'ler: <span x-text="getChannelPreference(channel)?.target_tags?.join(', ') || 'Tümü'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Excluded Tags -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Hariç Tutulan Tag'ler
+                            </label>
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                <template x-for="tag in availableTags" :key="tag">
+                                    <label class="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                                        <input type="checkbox" 
+                                               :checked="isTagExcluded(channel, tag)"
+                                               @change="toggleTag(channel, 'excluded_tags', tag, $event.target.checked)"
+                                               class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300" x-text="tag"></span>
+                                    </label>
+                                </template>
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                Hariç tutulan tag'ler: <span x-text="getChannelPreference(channel)?.excluded_tags?.join(', ') || 'Yok'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Quiet Hours -->
+                        <div>
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="checkbox" 
+                                       :checked="getChannelPreference(channel)?.quiet_hours?.enabled || false"
+                                       @change="toggleQuietHours(channel, $event.target.checked)"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sessiz Saatler</span>
+                            </label>
+                            
+                            <div x-show="getChannelPreference(channel)?.quiet_hours?.enabled" class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Başlangıç</label>
+                                    <input type="time" 
+                                           :value="getChannelPreference(channel)?.quiet_hours?.start || '22:00'"
+                                           @input="updateQuietHours(channel, 'start', $event.target.value)"
+                                           class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Bitiş</label>
+                                    <input type="time" 
+                                           :value="getChannelPreference(channel)?.quiet_hours?.end || '08:00'"
+                                           @input="updateQuietHours(channel, 'end', $event.target.value)"
+                                           class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Notification History -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Bildirim Geçmişi</h2>
+        
+        <!-- Filters -->
+        <div class="flex space-x-4 mb-4">
+            <select x-model="historyFilters.channel" @change="loadHistory()" 
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                <option value="">Tüm Kanallar</option>
+                <option value="email">Email</option>
+                <option value="telegram">Telegram</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="webhook">Webhook</option>
+            </select>
+            
+            <select x-model="historyFilters.status" @change="loadHistory()" 
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                <option value="">Tüm Durumlar</option>
+                <option value="sent">Gönderildi</option>
+                <option value="failed">Başarısız</option>
+                <option value="pending">Beklemede</option>
+            </select>
+        </div>
+
+        <!-- History Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                    <tr>
+                        <th class="px-4 py-3">Tarih</th>
+                        <th class="px-4 py-3">Tür</th>
+                        <th class="px-4 py-3">Kanal</th>
+                        <th class="px-4 py-3">Başlık</th>
+                        <th class="px-4 py-3">Alıcı</th>
+                        <th class="px-4 py-3">Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="item in history" :key="item.id">
+                        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                            <td class="px-4 py-3" x-text="formatDate(item.created_at)"></td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs rounded-full" 
+                                      :class="getTypeBadgeClass(item.type)" 
+                                      x-text="getTypeLabel(item.type)"></span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs rounded-full" 
+                                      :class="getChannelBadgeClass(item.channel)" 
+                                      x-text="getChannelLabel(item.channel)"></span>
+                            </td>
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white" x-text="item.title"></td>
+                            <td class="px-4 py-3" x-text="item.recipient"></td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs rounded-full" 
+                                      :class="getStatusBadgeClass(item.status)" 
+                                      x-text="getStatusLabel(item.status)"></span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function notificationPreferencesApp() {
+    return {
+        loading: false,
+        rules: [],
+        preferences: [],
+        history: [],
+        channels: ['email', 'telegram', 'whatsapp', 'webhook'],
+        notificationTypes: ['target_status_change', 'sla_violation', 'alert_opened', 'alert_closed', 'system_health', 'daily_report'],
+        availableTags: [],
+        historyFilters: {
+            channel: '',
+            status: ''
+        },
+        showCreateRuleModal: false,
+
+        async init() {
+            await this.loadRules();
+            await this.loadPreferences();
+            await this.loadAvailableTags();
+            await this.loadHistory();
+        },
+
+        async loadRules() {
+            try {
+                const response = await fetch('/api/notification-rules', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const data = await response.json();
+                this.rules = data.data || [];
+            } catch (error) {
+                console.error('Error loading rules:', error);
+            }
+        },
+
+        async loadPreferences() {
+            try {
+                const response = await fetch('/api/notification-preferences/1', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const data = await response.json();
+                this.preferences = data.data || [];
+            } catch (error) {
+                console.error('Error loading preferences:', error);
+            }
+        },
+
+        async loadAvailableTags() {
+            try {
+                const response = await fetch('/api/targets/tags/available', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const data = await response.json();
+                this.availableTags = data.data || [];
+            } catch (error) {
+                console.error('Error loading tags:', error);
+            }
+        },
+
+        async loadHistory() {
+            try {
+                const params = new URLSearchParams();
+                if (this.historyFilters.channel) params.append('channel', this.historyFilters.channel);
+                if (this.historyFilters.status) params.append('status', this.historyFilters.status);
+                
+                const response = await fetch(`/api/notification-history?${params}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const data = await response.json();
+                this.history = data.data || [];
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        },
+
+        async savePreferences() {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/notification-preferences/1', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(this.preferences)
+                });
+                
+                if (response.ok) {
+                    Toast.show({
+                        type: 'success',
+                        title: 'Başarılı',
+                        message: 'Bildirim tercihleri kaydedildi',
+                        timeout: 3000
+                    });
+                } else {
+                    throw new Error('Failed to save preferences');
+                }
+            } catch (error) {
+                console.error('Error saving preferences:', error);
+                Toast.show({
+                    type: 'error',
+                    title: 'Hata',
+                    message: 'Tercihler kaydedilemedi',
+                    timeout: 5000
+                });
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        getChannelPreference(channel) {
+            return this.preferences.find(p => p.channel === channel);
+        },
+
+        toggleChannel(channel, enabled) {
+            let preference = this.getChannelPreference(channel);
+            if (!preference) {
+                preference = {
+                    channel: channel,
+                    is_enabled: enabled,
+                    recipient: '',
+                    notification_types: [],
+                    priority: 'medium',
+                    target_tags: [],
+                    excluded_tags: []
+                };
+                this.preferences.push(preference);
+            } else {
+                preference.is_enabled = enabled;
+            }
+        },
+
+        updateChannelPreference(channel, field, value) {
+            let preference = this.getChannelPreference(channel);
+            if (!preference) {
+                preference = {
+                    channel: channel,
+                    is_enabled: true,
+                    recipient: '',
+                    notification_types: [],
+                    priority: 'medium',
+                    target_tags: [],
+                    excluded_tags: []
+                };
+                this.preferences.push(preference);
+            }
+            preference[field] = value;
+        },
+
+        isNotificationTypeEnabled(channel, type) {
+            const preference = this.getChannelPreference(channel);
+            return preference?.notification_types?.includes(type) || false;
+        },
+
+        toggleNotificationType(channel, type, enabled) {
+            let preference = this.getChannelPreference(channel);
+            if (!preference) {
+                preference = {
+                    channel: channel,
+                    is_enabled: true,
+                    recipient: '',
+                    notification_types: [],
+                    priority: 'medium',
+                    target_tags: [],
+                    excluded_tags: []
+                };
+                this.preferences.push(preference);
+            }
+            
+            if (!preference.notification_types) {
+                preference.notification_types = [];
+            }
+            
+            if (enabled) {
+                if (!preference.notification_types.includes(type)) {
+                    preference.notification_types.push(type);
+                }
+            } else {
+                preference.notification_types = preference.notification_types.filter(t => t !== type);
+            }
+        },
+
+        isTagIncluded(channel, tag) {
+            const preference = this.getChannelPreference(channel);
+            return preference?.target_tags?.includes(tag) || false;
+        },
+
+        isTagExcluded(channel, tag) {
+            const preference = this.getChannelPreference(channel);
+            return preference?.excluded_tags?.includes(tag) || false;
+        },
+
+        toggleTag(channel, tagType, tag, enabled) {
+            let preference = this.getChannelPreference(channel);
+            if (!preference) {
+                preference = {
+                    channel: channel,
+                    is_enabled: true,
+                    recipient: '',
+                    notification_types: [],
+                    priority: 'medium',
+                    target_tags: [],
+                    excluded_tags: []
+                };
+                this.preferences.push(preference);
+            }
+            
+            if (!preference[tagType]) {
+                preference[tagType] = [];
+            }
+            
+            if (enabled) {
+                if (!preference[tagType].includes(tag)) {
+                    preference[tagType].push(tag);
+                }
+            } else {
+                preference[tagType] = preference[tagType].filter(t => t !== tag);
+            }
+        },
+
+        toggleQuietHours(channel, enabled) {
+            let preference = this.getChannelPreference(channel);
+            if (!preference) {
+                preference = {
+                    channel: channel,
+                    is_enabled: true,
+                    recipient: '',
+                    notification_types: [],
+                    priority: 'medium',
+                    target_tags: [],
+                    excluded_tags: []
+                };
+                this.preferences.push(preference);
+            }
+            
+            if (!preference.quiet_hours) {
+                preference.quiet_hours = {
+                    enabled: enabled,
+                    start: '22:00',
+                    end: '08:00',
+                    timezone: 'Europe/Istanbul'
+                };
+            } else {
+                preference.quiet_hours.enabled = enabled;
+            }
+        },
+
+        updateQuietHours(channel, field, value) {
+            let preference = this.getChannelPreference(channel);
+            if (!preference) {
+                preference = {
+                    channel: channel,
+                    is_enabled: true,
+                    recipient: '',
+                    notification_types: [],
+                    priority: 'medium',
+                    target_tags: [],
+                    excluded_tags: []
+                };
+                this.preferences.push(preference);
+            }
+            
+            if (!preference.quiet_hours) {
+                preference.quiet_hours = {
+                    enabled: true,
+                    start: '22:00',
+                    end: '08:00',
+                    timezone: 'Europe/Istanbul'
+                };
+            }
+            
+            preference.quiet_hours[field] = value;
+        },
+
+        // Helper functions for labels and styling
+        getTypeLabel(type) {
+            const labels = {
+                'target_status_change': 'Durum Değişikliği',
+                'sla_violation': 'SLA İhlali',
+                'alert_opened': 'Uyarı Açıldı',
+                'alert_closed': 'Uyarı Kapandı',
+                'system_health': 'Sistem Sağlığı',
+                'daily_report': 'Günlük Rapor'
+            };
+            return labels[type] || type;
+        },
+
+        getChannelLabel(channel) {
+            const labels = {
+                'email': 'Email',
+                'telegram': 'Telegram',
+                'whatsapp': 'WhatsApp',
+                'webhook': 'Webhook'
+            };
+            return labels[channel] || channel;
+        },
+
+        getPriorityLabel(priority) {
+            const labels = {
+                'low': 'Düşük',
+                'medium': 'Orta',
+                'high': 'Yüksek',
+                'critical': 'Kritik'
+            };
+            return labels[priority] || priority;
+        },
+
+        getStatusLabel(status) {
+            const labels = {
+                'sent': 'Gönderildi',
+                'failed': 'Başarısız',
+                'pending': 'Beklemede'
+            };
+            return labels[status] || status;
+        },
+
+        getChannelPlaceholder(channel) {
+            const placeholders = {
+                'email': 'ornek@email.com',
+                'telegram': '@kullanici_adi',
+                'whatsapp': '+905551234567',
+                'webhook': 'https://webhook.site/...'
+            };
+            return placeholders[channel] || '';
+        },
+
+        getChannelIcon(channel) {
+            const icons = {
+                'email': 'fas fa-envelope',
+                'telegram': 'fab fa-telegram',
+                'whatsapp': 'fab fa-whatsapp',
+                'webhook': 'fas fa-link'
+            };
+            return icons[channel] || 'fas fa-bell';
+        },
+
+        getChannelIconClass(channel) {
+            const classes = {
+                'email': 'bg-blue-100 text-blue-600',
+                'telegram': 'bg-blue-100 text-blue-600',
+                'whatsapp': 'bg-green-100 text-green-600',
+                'webhook': 'bg-purple-100 text-purple-600'
+            };
+            return classes[channel] || 'bg-gray-100 text-gray-600';
+        },
+
+        getTypeBadgeClass(type) {
+            const classes = {
+                'target_status_change': 'bg-blue-100 text-blue-800',
+                'sla_violation': 'bg-red-100 text-red-800',
+                'alert_opened': 'bg-yellow-100 text-yellow-800',
+                'alert_closed': 'bg-green-100 text-green-800',
+                'system_health': 'bg-purple-100 text-purple-800',
+                'daily_report': 'bg-gray-100 text-gray-800'
+            };
+            return classes[type] || 'bg-gray-100 text-gray-800';
+        },
+
+        getChannelBadgeClass(channel) {
+            const classes = {
+                'email': 'bg-blue-100 text-blue-800',
+                'telegram': 'bg-blue-100 text-blue-800',
+                'whatsapp': 'bg-green-100 text-green-800',
+                'webhook': 'bg-purple-100 text-purple-800'
+            };
+            return classes[channel] || 'bg-gray-100 text-gray-800';
+        },
+
+        getPriorityBadgeClass(priority) {
+            const classes = {
+                'low': 'bg-gray-100 text-gray-800',
+                'medium': 'bg-yellow-100 text-yellow-800',
+                'high': 'bg-orange-100 text-orange-800',
+                'critical': 'bg-red-100 text-red-800'
+            };
+            return classes[priority] || 'bg-gray-100 text-gray-800';
+        },
+
+        getStatusBadgeClass(status) {
+            const classes = {
+                'sent': 'bg-green-100 text-green-800',
+                'failed': 'bg-red-100 text-red-800',
+                'pending': 'bg-yellow-100 text-yellow-800'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        formatDate(dateString) {
+            return new Date(dateString).toLocaleString('tr-TR');
+        },
+
+        editRule(rule) {
+            // TODO: Implement rule editing modal
+            console.log('Edit rule:', rule);
+        },
+
+        async deleteRule(ruleId) {
+            if (!confirm('Bu kuralı silmek istediğinizden emin misiniz?')) return;
+            
+            try {
+                const response = await fetch(`/api/notification-rules/${ruleId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                
+                if (response.ok) {
+                    await this.loadRules();
+                    Toast.show({
+                        type: 'success',
+                        title: 'Başarılı',
+                        message: 'Kural silindi',
+                        timeout: 3000
+                    });
+                }
+            } catch (error) {
+                console.error('Error deleting rule:', error);
+                Toast.show({
+                    type: 'error',
+                    title: 'Hata',
+                    message: 'Kural silinemedi',
+                    timeout: 5000
+                });
+            }
+        }
+    }
+}
+</script>
